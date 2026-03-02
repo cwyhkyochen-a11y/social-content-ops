@@ -7,7 +7,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/OpenClaw-Skill-blue" alt="OpenClaw Skill">
   <img src="https://img.shields.io/badge/License-MIT-green" alt="License">
-  <img src="https://img.shields.io/badge/Platform-Xiaohongshu%20%7C%20Reddit%20%7C%20Pinterest-orange" alt="Platform">
+  <img src="https://img.shields.io/badge/Platform-X%20%7C%20Instagram%20%7C%20Facebook%20%7C%20Xiaohongshu-orange" alt="Platform">
   <img src="https://img.shields.io/badge/Integration-Baoyu%20Skills-purple" alt="Baoyu Skills">
 </p>
 
@@ -15,7 +15,7 @@
 
 ## 🎯 项目简介
 
-**Social Content Ops** 是一个社交媒体内容运营自动化系统，作为 [OpenClaw](https://openclaw.ai) 的 Skill 运行。支持从小红书抓取优质内容，经过 AI 改编后发布到 Reddit、Pinterest、Discord 等平台，并提供完整的数据分析功能。
+**Social Content Ops** 是一个社交媒体内容运营自动化系统，作为 [OpenClaw](https://openclaw.ai) 的 Skill 运行。支持从小红书抓取优质内容，经过 AI 改编后发布到 X (Twitter)、Instagram、Facebook 等平台，并提供完整的数据分析功能。
 
 **核心亮点：** 集成 [baoyu-skills](https://github.com/JimLiu/baoyu-skills) 的 AI 配图生成能力，支持自动生成小红书风格的多图系列和信息图。
 
@@ -176,11 +176,76 @@ npx tsx scripts/approve-all.ts --task-id <task-id>
 
 ### 第二步：内容发布
 
+支持发布到多个平台：**小红书、X (Twitter)、Instagram、Facebook**
+
+#### X (Twitter) 发布
+
+```bash
+# 添加 X 账号
+npx tsx scripts/add-x-account.ts
+
+# 发布推文
+python scripts/x_publish.py \
+  --text "Hello World" \
+  --images img1.jpg img2.jpg \
+  --auto-publish
+```
+
+#### Instagram 发布
+
+```bash
+# 添加 Instagram 账号
+npx tsx scripts/add-instagram-account.ts
+
+# 发布图片
+python scripts/instagram_publish.py \
+  -u username -p password \
+  -c "Hello Instagram" --image photo.jpg
+
+# 发布多张图片 (Carousel)
+python scripts/instagram_publish.py \
+  -u username -p password \
+  -c "My photos" --images photo1.jpg photo2.jpg photo3.jpg
+
+# 发布 Story
+python scripts/instagram_publish.py \
+  -u username -p password \
+  --story --image story.jpg
+```
+
+#### Facebook 发布
+
+```bash
+# 添加 Facebook 账号（需要 Access Token）
+npx tsx scripts/add-facebook-account.ts
+
+# 获取 Access Token: https://developers.facebook.com/tools/explorer/
+
+# 发布文本
+python scripts/facebook_publish.py \
+  --token YOUR_TOKEN \
+  --message "Hello Facebook"
+
+# 发布带图片
+python scripts/facebook_publish.py \
+  --token YOUR_TOKEN \
+  --message "Hello with photo" \
+  --photo photo.jpg
+
+# 发布到页面
+python scripts/facebook_publish.py \
+  --token PAGE_TOKEN \
+  --page-id PAGE_ID \
+  --message "Hello Page"
+```
+
+#### 通用发布流程
+
 ```bash
 # 创建发布任务
 npx tsx scripts/create-publish-task.ts \
   --source-ids <note-id-1>,<note-id-2> \
-  --target-platform reddit
+  --target-platform x  # 可选: xiaohongshu, x, instagram, facebook
 
 # 生成内容（AI 改编）
 npx tsx scripts/generate-content.ts --task-id <publish-task-id>
@@ -229,7 +294,7 @@ npx tsx scripts/generate-report.ts --period 7d
 | 表名 | 用途 | 关键字段 |
 |------|------|----------|
 | `source_accounts` | 信息源账号（小红书等） | platform, login_status, daily_quota |
-| `target_accounts` | 被运营账号（Reddit等） | platform, api_config, positioning, **visual_style**, **layout_preference** |
+| `target_accounts` | 被运营账号（X/IG/FB等） | platform, api_config, positioning, **visual_style**, **layout_preference** |
 | `crawl_tasks` | 抓取任务 | status, query_list, target_count |
 | `crawl_results` | 抓取结果 | source_url, content, quality_score, curation_status |
 | `publish_tasks` | 发布任务 | status, content, **generated_images**, scheduled_at |

@@ -4,48 +4,49 @@
 
 | 平台 | 优先级 | 技术方案 | 现有 Skill | 状态 |
 |------|--------|----------|------------|------|
-| **X (Twitter)** | P0 | CDP / API | baoyu-skills 有 post-to-x | 待集成 |
-| **Instagram** | P1 | instagrapi / CDP | 需调研 | 待开发 |
-| **Facebook** | P1 | facebook-sdk / CDP | 需调研 | 待开发 |
-| **Threads** | P2 | threads-api / CDP | 需调研 | 待开发 |
+| **X (Twitter)** | P0 | CDP | 自建 x_publish.py | ✅ 已完成 |
+| **Instagram** | P1 | instagrapi API | 自建 instagram_publish.py | ✅ 已完成 |
+| **Facebook** | P1 | facebook-sdk | 自建 facebook_publish.py | ✅ 已完成 |
+| **Threads** | P2 | threads-api / CDP | 需调研 | 📝 待开发 |
+| **Reddit** | P2 | PRAW / API | 规划中 | 📝 待开发 |
+| **Pinterest** | P2 | pinterest-api | 规划中 | 📝 待开发 |
 
 ---
 
 ## 推荐方案
 
-### 1. X (Twitter) - 推荐方案 A: 使用 baoyu-skills
+### 1. X (Twitter) - 已实现: 自建 CDP 脚本
 
-**baoyu-skills** 已内置 `post-to-x` 技能，可直接集成：
+✅ **状态**: 已完成，脚本位置: `scripts/x_publish.py`
 
-```bash
-npx skills run post-to-x --content "Hello World" --image path/to/image.png
-```
-
-**优点**:
-- 现成可用，无需开发
-- 与现有 baoyu-skills 生态一致
-
-**缺点**:
-- 依赖外部 skill，控制粒度有限
-
-### 2. X (Twitter) - 推荐方案 B: 自建 CDP 脚本
-
-参考 redbookskills 的实现方式，创建 `x_publish.py`：
+**实现方式**: 复用 redbookskills 的技术栈
 - 复用 chrome_launcher.py
 - 复用 image_downloader.py
 - 实现 X 的表单填写逻辑
 
-**优点**:
-- 完全自主可控
-- 技术栈与小红书一致
+**使用方法**:
+```bash
+# 添加账号
+npx tsx scripts/add-x-account.ts
 
-**缺点**:
-- 需要开发时间
-- X 的反爬机制较强
+# 发布内容
+python scripts/x_publish.py \
+  --text "Hello World" \
+  --images img1.jpg img2.jpg \
+  --auto-publish
+```
 
-### 3. Instagram - 推荐方案: instagrapi
+**特性**:
+- ✅ 支持文本 + 图片（最多4张）
+- ✅ 支持有头/无头模式
+- ✅ 自动检测登录状态
+- ✅ 支持多账号
 
-使用 Python 库 `instagrapi`：
+### 2. Instagram - 已实现: instagrapi API
+
+✅ **状态**: 已完成，脚本位置: `scripts/instagram_publish.py`
+
+**实现方式**: 使用 instagrapi 库
 
 ```python
 from instagrapi import Client
@@ -63,20 +64,39 @@ cl.photo_upload("path/to/image.jpg", "Caption here")
 - 账号容易被风控
 - 需要处理验证码/2FA
 
-### 4. Facebook - 推荐方案: facebook-sdk
+### 3. Facebook - 已实现: facebook-sdk
 
-使用官方 SDK：
+✅ **状态**: 已完成，脚本位置: `scripts/facebook_publish.py`
 
-```python
-import facebook
+**实现方式**: 使用官方 facebook-sdk
 
-graph = facebook.GraphAPI(access_token)
-graph.put_object("me", "feed", message="Hello")
+**使用方法**:
+```bash
+# 安装依赖
+pip install facebook-sdk
+
+# 添加账号
+npx tsx scripts/add-facebook-account.ts
+
+# 发布内容
+python scripts/facebook_publish.py \
+  --token YOUR_ACCESS_TOKEN \
+  --message "Hello Facebook" \
+  --photo photo.jpg
 ```
 
-**注意**:
-- 需要申请 Facebook App
-- 个人账号发布受限较多
+**获取 Access Token**:
+1. 访问 https://developers.facebook.com/tools/explorer/
+2. 创建应用或使用现有应用
+3. 获取 User Access Token
+4. 个人发布需要: `publish_posts` 权限
+5. 页面发布需要: `pages_manage_posts` 权限
+
+**特性**:
+- ✅ 支持发布到个人主页或页面
+- ✅ 支持文本 + 图片（最多10张）
+- ✅ 支持链接分享
+- ✅ 可列出管理的页面
 
 ### 5. Threads - 推荐方案: threads-api (非官方)
 
