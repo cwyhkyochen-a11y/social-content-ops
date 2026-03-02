@@ -274,13 +274,59 @@ python scripts/pinterest_publish.py \
   --end-date 2024-01-31
 ```
 
+#### Threads 发布
+
+```bash
+# 添加 Threads 账号
+npx tsx scripts/add-threads-account.ts
+
+# 获取 Access Token: https://developers.facebook.com/apps/
+
+# 发布文本
+python scripts/threads_publish.py \
+  --token YOUR_TOKEN \
+  --text "Hello Threads! 🧵"
+
+# 发布图片
+python scripts/threads_publish.py \
+  --token YOUR_TOKEN \
+  --text "Check this out!" \
+  --image-url "https://example.com/image.jpg"
+
+# 发布视频
+python scripts/threads_publish.py \
+  --token YOUR_TOKEN \
+  --text "My video" \
+  --video-url "https://example.com/video.mp4"
+
+# 发布 Carousel (2-10 张图片)
+python scripts/threads_publish.py \
+  --token YOUR_TOKEN \
+  --text "Swipe through!" \
+  --carousel-images \
+    "https://example.com/img1.jpg" \
+    "https://example.com/img2.jpg" \
+    "https://example.com/img3.jpg"
+
+# 获取用户信息
+python scripts/threads_publish.py --token YOUR_TOKEN --info
+
+# 列出帖子
+python scripts/threads_publish.py --token YOUR_TOKEN --list-threads
+
+# 获取 Analytics
+python scripts/threads_publish.py \
+  --token YOUR_TOKEN \
+  --analytics THREAD_ID
+```
+
 #### 通用发布流程
 
 ```bash
 # 创建发布任务
 npx tsx scripts/create-publish-task.ts \
   --source-ids <note-id-1>,<note-id-2> \
-  --target-platform x  # 可选: xiaohongshu, x, instagram, facebook
+  --target-platform x  # 可选: xiaohongshu, x, instagram, facebook, threads
 
 # 生成内容（AI 改编）
 npx tsx scripts/generate-content.ts --task-id <publish-task-id>

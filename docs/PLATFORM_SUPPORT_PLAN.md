@@ -10,6 +10,7 @@
 | **Threads** | P2 | threads-api / CDP | 需调研 | 📝 待开发 |
 | **Reddit** | P2 | PRAW / API | 规划中 | 📝 待开发 |
 | **Pinterest** | P2 | Pinterest API v5 | 自建 pinterest_publish.py | ✅ 已完成 |
+| **Threads** | P2 | Meta Threads API | 自建 threads_publish.py | ✅ 已完成 |
 
 ---
 
@@ -152,23 +153,85 @@ python scripts/pinterest_publish.py \
 - ✅ 支持远程图片 URL
 - ✅ 最佳图片比例 2:3（竖图）
 
-### 5. Threads - 推荐方案: threads-api (非官方)
+### 5. Threads - 已实现: Meta Threads API (官方)
 
+✅ **状态**: 已完成，脚本位置: `scripts/threads_publish.py`
+
+**实现方式**: 使用 Meta 官方 Threads API (Graph API)
+
+**使用方法**:
 ```bash
-pip install threads-api
+# 安装依赖
+pip install requests
+
+# 添加账号
+npx tsx scripts/add-threads-account.ts
+
+# 发布文本
+python scripts/threads_publish.py \
+  --token YOUR_ACCESS_TOKEN \
+  --text "Hello Threads! 🧵"
+
+# 发布图片
+python scripts/threads_publish.py \
+  --token YOUR_TOKEN \
+  --text "Check this out!" \
+  --image-url "https://example.com/image.jpg"
+
+# 发布视频
+python scripts/threads_publish.py \
+  --token YOUR_TOKEN \
+  --text "My video" \
+  --video-url "https://example.com/video.mp4"
+
+# 发布 Carousel (2-10 张图片)
+python scripts/threads_publish.py \
+  --token YOUR_TOKEN \
+  --text "Swipe through!" \
+  --carousel-images "img1.jpg" "img2.jpg" "img3.jpg"
+
+# 获取用户信息
+python scripts/threads_publish.py --token YOUR_TOKEN --info
+
+# 列出帖子
+python scripts/threads_publish.py --token YOUR_TOKEN --list-threads
+
+# 获取 Analytics
+python scripts/threads_publish.py \
+  --token YOUR_TOKEN \
+  --analytics THREAD_ID \
+  --start-date 2024-01-01 \
+  --end-date 2024-01-31
 ```
 
-```python
-from threads_api import ThreadsAPI
+**获取 Access Token**:
+1. 访问 https://developers.facebook.com/apps/
+2. 创建应用，添加 "Threads" 产品
+3. 配置 OAuth，获取 Client ID 和 Secret
+4. 授权 URL:
+   ```
+   https://threads.net/oauth/authorize?
+   client_id=CLIENT_ID&
+   redirect_uri=REDIRECT_URI&
+   scope=threads_basic,threads_content_publish&
+   response_type=code
+   ```
+5. 用 code 换取 access_token
 
-api = ThreadsAPI()
-api.login(username, password)
-api.publish("Hello Threads", image_path="image.jpg")
-```
+**所需权限**:
+- `threads_basic`: 读取用户信息
+- `threads_content_publish`: 发布内容
+- `threads_manage_insights`: 获取数据
 
-**注意**:
-- 非官方 API，可能不稳定
-- Threads 官方 API 刚开放，限制较多
+**特性**:
+- ✅ 发布文本帖子 (最多 500 字符)
+- ✅ 发布图片帖子
+- ✅ 发布视频帖子
+- ✅ 发布 Carousel (2-10 张图片)
+- ✅ 获取用户信息
+- ✅ 列出用户帖子
+- ✅ 获取帖子 Analytics (views, likes, replies, reposts, quotes)
+- ✅ 速率限制监控 (200 requests/hour)
 
 ---
 
