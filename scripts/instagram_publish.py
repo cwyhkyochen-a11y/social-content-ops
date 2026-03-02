@@ -64,7 +64,7 @@ try:
     from instagrapi import Client
     from instagrapi.exceptions import (
         LoginRequired, ChallengeRequired, 
-        CheckpointRequired, BadPassword
+        BadPassword
     )
 except ImportError:
     print("❌ 请先安装 instagrapi:")
