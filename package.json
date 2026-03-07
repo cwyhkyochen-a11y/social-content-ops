@@ -9,7 +9,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:init": "node --loader ts-node/esm src/db/init.ts",
-    "db:seed": "node --loader ts-node/esm src/db/seed.ts"
+    "db:seed": "node --loader ts-node/esm src/db/seed.ts",
+    "console": "node --loader ts-node/esm src/console-server.ts"
   },
   "keywords": [
     "content-ops",
@@ -19,8 +20,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@types/express": "^5.0.6",
     "better-sqlite3": "^12.6.2",
     "drizzle-orm": "^0.45.1",
+    "express": "^5.2.1",
     "playwright": "^1.58.2",
     "uuid": "^9.0.1",
     "xiaohongshu-mcp-steve": "^1.1.2"

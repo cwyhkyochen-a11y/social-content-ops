@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>content-ops 控制台</title>
+  <style>
+    body { font-family: Inter, system-ui, sans-serif; margin: 0; background: #0b1020; color: #eef2ff; }
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 24px; }
+    h1,h2 { margin: 0 0 12px; }
+    .grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 20px; }
+    .card { background: #121935; border: 1px solid #243056; border-radius: 16px; padding: 18px; box-shadow: 0 6px 24px rgba(0,0,0,.2); }
+    .muted { color: #9fb0e0; font-size: 13px; }
+    .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    input, select, textarea, button { border-radius: 10px; border: 1px solid #34457a; background: #0c1430; color: #eef2ff; padding: 10px 12px; }
+    input, select, textarea { width: 100%; box-sizing: border-box; }
+    textarea { min-height: 140px; resize: vertical; }
+    button { cursor: pointer; background: #365dff; border-color: #365dff; font-weight: 600; }
+    button.secondary { background: transparent; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { padding: 10px 8px; border-bottom: 1px solid #243056; text-align: left; vertical-align: top; }
+    .status { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; }
+    .ok { background: #173d2b; color: #84f0b0; }
+    .bad { background: #4a1f28; color: #ff99aa; }
+    .pill { display:inline-block; padding:2px 8px; border-radius:999px; background:#1d284a; color:#c7d2fe; font-size:12px; margin-right:6px; }
+    .stack { display: grid; gap: 10px; }
+    .record { border: 1px solid #243056; border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+    a { color: #8ab4ff; }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>content-ops 控制台</h1>
+    <p class="muted">本地默认监听。可以选择平台/账号提交内容，查看代运营账号列表，查看发帖记录（成功/失败）。</p>
+
+    <div class="grid">
+      <section class="card">
+        <h2>手动提交发帖任务</h2>
+        <div class="stack">
+          <label>目标账号
+            <select id="accountSelect"></select>
+          </label>
+          <label>标题 / 任务名
+            <input id="title" placeholder="可留空，默认自动生成" />
+          </label>
+          <label>正文
+            <textarea id="text" placeholder="输入要发布的正文"></textarea>
+          </label>
+          <label>链接
+            <input id="link" placeholder="可选，例如 https://example.com" />
+          </label>
+          <label>图片/视频上传（可多选）
+            <input id="files" type="file" multiple />
+          </label>
+          <div class="row">
+            <button id="submitBtn">创建发布任务</button>
+            <button class="secondary" id="refreshBtn">刷新数据</button>
+            <span id="submitMsg" class="muted"></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>代运营账号列表</h2>
+        <p class="muted">这里只支持查看，不支持手动新增/删除。</p>
+        <table>
+          <thead>
+            <tr><th>名称</th><th>平台</th><th>主页</th><th>授权时间</th><th>可用</th></tr>
+          </thead>
+          <tbody id="accountsBody"></tbody>
+        </table>
+      </section>
+    </div>
+
+    <section class="card" style="margin-top:20px;">
+      <h2>推文 / 发帖记录</h2>
+      <p class="muted">显示发布任务及结果，包含成功/失败/待执行。</p>
+      <div id="records"></div>
+    </section>
+  </div>
+
+  <script>
+    async function j(url, opts) {
+      const r = await fetch(url, opts);
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'request failed');
+      return data;
+    }
+
+    async function uploadFile(file) {
+      const data = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const res = await j('/api/upload-base64', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ filename: file.name, contentType: file.type, data })
+      });
+      return res.path;
+    }
+
+    async function loadAccounts() {
+      const { items } = await j('/api/accounts');
+      const tbody = document.getElementById('accountsBody');
+      const select = document.getElementById('accountSelect');
+      tbody.innerHTML = '';
+      select.innerHTML = '';
+      for (const item of items) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${item.name}</td>
+          <td><span class="pill">${item.platform}</span></td>
+          <td>${item.homepageUrl ? `<a href="${item.homepageUrl}" target="_blank">主页</a>` : '-'}</td>
+          <td>${item.authorizedAt || '-'}</td>
+          <td><span class="status ${item.usable ? 'ok' : 'bad'}">${item.usable ? '可用' : '不可用'}</span></td>
+        `;
+        tbody.appendChild(tr);
+
+        const opt = document.createElement('option');
+        opt.value = item.id;
+        opt.textContent = `${item.platform} / ${item.name} ${item.usable ? '' : '(不可用)'}`;
+        select.appendChild(opt);
+      }
+    }
+
+    async function loadRecords() {
+      const { items } = await j('/api/publish-records?limit=100');
+      const box = document.getElementById('records');
+      box.innerHTML = '';
+      for (const item of items) {
+        const div = document.createElement('div');
+        const last = item.lastResult || {};
+        const resultState = item.status === 'published' ? 'ok' : (item.status === 'failed' ? 'bad' : '');
+        div.className = 'record';
+        div.innerHTML = `
+          <div class="row" style="justify-content:space-between;align-items:flex-start;">
+            <div>
+              <strong>${item.title || item.taskName || item.id}</strong>
+              <div class="muted">${item.platform || '-'} / ${item.accountName || '-'} / task: ${item.id}</div>
+            </div>
+            <div>
+              <span class="status ${resultState}">${item.status}</span>
+            </div>
+          </div>
+          <p style="white-space:pre-wrap;">${(item.text || '').slice(0, 400) || '<无正文>'}</p>
+          <div class="muted">创建: ${item.createdAt || '-'} ｜ 发布: ${item.publishedAt || '-'} ${item.homepageUrl ? `｜ <a href="${item.homepageUrl}" target="_blank">账号主页</a>` : ''}</div>
+          <div class="muted">结果链接: ${last.url ? `<a href="${last.url}" target="_blank">${last.url}</a>` : '-'} ｜ 平台ID: ${last.platformPostId || '-'}</div>
+          <div class="muted">失败说明/备注: ${item.reviewNotes || (last.raw && last.raw.error) || '-'}</div>
+          <div class="row" style="margin-top:8px;">
+            <button onclick="executeTask('${item.id}')">执行发布</button>
+          </div>
+        `;
+        box.appendChild(div);
+      }
+    }
+
+    async function submitPost() {
+      const btn = document.getElementById('submitBtn');
+      const msg = document.getElementById('submitMsg');
+      btn.disabled = true;
+      msg.textContent = '上传媒体并创建任务中...';
+      try {
+        const files = [...document.getElementById('files').files];
+        const media = [];
+        for (const file of files) media.push(await uploadFile(file));
+        const payload = {
+          targetAccountId: document.getElementById('accountSelect').value,
+          title: document.getElementById('title').value,
+          text: document.getElementById('text').value,
+          link: document.getElementById('link').value,
+          media,
+        };
+        const res = await j('/api/publish', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify(payload)
+        });
+        msg.textContent = `已创建任务：${res.taskId}`;
+        document.getElementById('title').value = '';
+        document.getElementById('text').value = '';
+        document.getElementById('link').value = '';
+        document.getElementById('files').value = '';
+        await loadRecords();
+      } catch (e) {
+        msg.textContent = `失败：${e.message}`;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function executeTask(taskId) {
+      try {
+        const res = await j(`/api/publish/${taskId}/execute`, { method: 'POST' });
+        alert(res.ok ? `执行成功\n${res.stdout || ''}` : `执行失败\n${res.stderr || res.stdout || ''}`);
+        await loadRecords();
+      } catch (e) {
+        alert(`执行失败: ${e.message}`);
+      }
+    }
+
+    document.getElementById('submitBtn').addEventListener('click', submitPost);
+    document.getElementById('refreshBtn').addEventListener('click', async () => {
+      await loadAccounts();
+      await loadRecords();
+    });
+
+    Promise.all([loadAccounts(), loadRecords()]);
+  </script>
+</body>
+</html>
