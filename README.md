@@ -231,8 +231,15 @@ python skills/content-ops/scripts/publish-dispatch.py \
 ## ⚠️ 当前限制
 
 - X 视频上传尚未完成
-- 其他平台尚未全部升级到与 X 同等级的任务驱动发布模式
 - 小红书详情抓取仍受网页端限制
+
+## 🗺️ Roadmap（下一版本）
+
+以下能力已明确进入下一版本规划：
+
+- 其他平台升级到与 X 同级别的任务驱动发布模式
+- 更完整的统一 scheduler / retry 机制
+- X 视频上传完成
 
 ---
 
