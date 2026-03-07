@@ -37,7 +37,21 @@ cd ~/.openclaw/workspace/skills/content-ops
 npx tsx scripts/x_post_api.ts --account-id <ACCOUNT_ID> --text "test"
 ```
 
-## 5. 绑定 publish task
+## 5. 自动线程
+
+```bash
+cd ~/.openclaw/workspace/skills/content-ops
+npx tsx scripts/x_post_api.ts --account-id <ACCOUNT_ID> --text "很长的内容" --thread
+```
+
+## 6. 图片发帖
+
+```bash
+cd ~/.openclaw/workspace/skills/content-ops
+npx tsx scripts/x_post_api.ts --account-id <ACCOUNT_ID> --text "配图内容" --images a.png b.jpg
+```
+
+## 7. 绑定 publish task
 
 ```bash
 cd ~/.openclaw/workspace/skills/content-ops
@@ -46,7 +60,8 @@ npx tsx scripts/x_post_api.ts --account-id <ACCOUNT_ID> --task-id <PUBLISH_TASK_
 
 ## 当前已知限制
 
-- 当前只支持文本发帖
-- 图片 / 视频 media upload 还没接
+- 当前支持文本、自动 thread、图片上传
+- 视频上传接口保留为占位，尚未完成
 - 如 token 临近过期，会自动尝试 refresh
 - 若 refresh 失败，需重新授权
+- 中文 numbered list 会自动优化为更适合 X 的换行格式
