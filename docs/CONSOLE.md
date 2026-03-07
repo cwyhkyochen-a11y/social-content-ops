@@ -7,6 +7,7 @@
 - 主动选择平台/账号创建发帖任务
 - 上传图片/视频并写入本地媒体目录
 - 查看代运营账号列表（只读）
+- 查看账号详情（授权、配置摘要、最近发布记录）
 - 查看发帖记录（成功 / 失败 / 待执行）
 - 登录后访问，避免裸奔在本地或公网
 
@@ -35,12 +36,6 @@ npm run console
 - `CONTENT_OPS_CONSOLE_PASSWORD`
 - `CONTENT_OPS_CONSOLE_SESSION_SECRET`
 
-示例：
-
-```bash
-CONTENT_OPS_CONSOLE_HOST=0.0.0.0 CONTENT_OPS_CONSOLE_PORT=3210 npm run console
-```
-
 ## 登录与权限
 
 当前为单用户登录：
@@ -51,7 +46,7 @@ CONTENT_OPS_CONSOLE_HOST=0.0.0.0 CONTENT_OPS_CONSOLE_PORT=3210 npm run console
 
 ## 页面能力
 
-### 1. 代运营账号列表
+### 1. 代运营账号列表 + 账号详情页
 
 只读展示：
 
@@ -66,12 +61,20 @@ CONTENT_OPS_CONSOLE_HOST=0.0.0.0 CONTENT_OPS_CONSOLE_PORT=3210 npm run console
 - 平台筛选
 - 可用性筛选
 - 关键字搜索
+- 点击名称打开账号详情页
+
+账号详情页展示：
+
+- 账号摘要
+- apiConfig
+- platformConfig
+- 最近 20 条发布记录
 
 ### 2. 手动发帖
 
 表单支持：
 
-- 选择目标账号
+- 平台过滤后选择目标账号
 - 输入标题/任务名
 - 输入正文
 - 输入链接
@@ -83,7 +86,19 @@ CONTENT_OPS_CONSOLE_HOST=0.0.0.0 CONTENT_OPS_CONSOLE_PORT=3210 npm run console
 - 状态默认置为 `approved`
 - 后续仍由 `publish-dispatch.py --task-id ... --execute` 执行发布
 
-### 3. 发布记录
+### 3. 按平台动态校验
+
+任务创建时会按账号平台动态提示并校验：
+
+- X：默认 280 字、最多 4 图、支持视频、不支持 link 字段、长文提示线程
+- Threads：默认 500 字、最多 10 图、支持视频、不支持 link 字段
+- Pinterest：必须且只能 1 张图片、支持 link、不支持视频
+- Facebook：支持 link、支持多图、支持视频
+- Instagram：预留摘要规则（便于后续接入）
+
+前端和后端都会做约束校验，避免提交出一堆注定失败的任务。
+
+### 4. 发布记录 + 任务详情页
 
 展示：
 
@@ -103,6 +118,16 @@ CONTENT_OPS_CONSOLE_HOST=0.0.0.0 CONTENT_OPS_CONSOLE_PORT=3210 npm run console
 - 关键字搜索
 - 默认每 15 秒自动刷新
 - 手动点击“执行发布”
+- 查看任务详情
+- 重新执行
+
+任务详情页展示：
+
+- 正文全文
+- 媒体列表
+- `content` 完整结构
+- `publish_results` 全量数组
+- 最后一次 `raw` 回执
 
 ## 媒体上传
 

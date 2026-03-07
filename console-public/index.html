@@ -33,6 +33,7 @@
     pre { white-space: pre-wrap; word-break: break-word; background:#0a1128; border:1px solid #243056; border-radius:12px; padding:12px; max-height: 360px; overflow:auto; }
     .modal { position: fixed; inset: 0; background: rgba(0,0,0,.55); display:flex; align-items:center; justify-content:center; padding:20px; }
     .modal-panel { width:min(1000px, 100%); max-height:90vh; overflow:auto; background:#121935; border:1px solid #243056; border-radius:16px; padding:18px; }
+    .hint { font-size: 12px; color: #89a0da; }
     @media (max-width: 900px) { .grid, .filters { grid-template-columns: 1fr; } }
   </style>
 </head>
@@ -60,7 +61,7 @@
     <div class="toolbar">
       <div>
         <h1>content-ops 控制台</h1>
-        <p class="muted">v1：登录、筛选、搜索、自动刷新、手动发帖、查看代运营账号与发布记录、查看任务详情与原始回执。</p>
+        <p class="muted">账号详情页 + 按平台动态校验的任务创建已经接入。</p>
       </div>
       <div class="row">
         <span id="whoami" class="muted"></span>
@@ -72,9 +73,13 @@
       <section class="card">
         <h2>手动提交发帖任务</h2>
         <div class="stack">
+          <label>平台过滤
+            <select id="composerPlatformFilter"><option value="">全部平台</option></select>
+          </label>
           <label>目标账号
             <select id="accountSelect"></select>
           </label>
+          <div id="platformHint" class="hint"></div>
           <label>标题 / 任务名
             <input id="title" placeholder="可留空，默认自动生成" />
           </label>
@@ -99,9 +104,7 @@
         <h2>代运营账号列表</h2>
         <p class="muted">只读；不能手动新增/删除。</p>
         <div class="filters">
-          <select id="accountPlatformFilter">
-            <option value="">全部平台</option>
-          </select>
+          <select id="accountPlatformFilter"><option value="">全部平台</option></select>
           <select id="accountUsableFilter">
             <option value="">全部状态</option>
             <option value="usable">仅可用</option>
@@ -119,16 +122,10 @@
     </div>
 
     <section class="card" style="margin-top:20px;">
-      <div class="row" style="justify-content:space-between;align-items:flex-end;">
-        <div>
-          <h2>推文 / 发帖记录</h2>
-          <p class="muted">显示发布任务及结果，包含成功 / 失败 / 待执行。默认每 15 秒自动刷新。</p>
-        </div>
-      </div>
+      <h2>推文 / 发帖记录</h2>
+      <p class="muted">显示发布任务及结果，包含成功 / 失败 / 待执行。默认每 15 秒自动刷新。</p>
       <div class="filters">
-        <select id="recordPlatformFilter">
-          <option value="">全部平台</option>
-        </select>
+        <select id="recordPlatformFilter"><option value="">全部平台</option></select>
         <select id="recordStatusFilter">
           <option value="">全部状态</option>
           <option value="published">published</option>
@@ -153,30 +150,33 @@
         <button class="secondary" onclick="closeTaskModal()">关闭</button>
       </div>
       <div class="stack" style="margin-top:12px;">
-        <div>
-          <h3>正文</h3>
-          <pre id="taskModalText"></pre>
-        </div>
-        <div>
-          <h3>媒体</h3>
-          <pre id="taskModalMedia"></pre>
-        </div>
-        <div>
-          <h3>结构化内容 content</h3>
-          <pre id="taskModalContent"></pre>
-        </div>
-        <div>
-          <h3>完整 publish_results</h3>
-          <pre id="taskModalResults"></pre>
-        </div>
-        <div>
-          <h3>最后一次 raw 回执</h3>
-          <pre id="taskModalRaw"></pre>
-        </div>
+        <div><h3>正文</h3><pre id="taskModalText"></pre></div>
+        <div><h3>媒体</h3><pre id="taskModalMedia"></pre></div>
+        <div><h3>结构化内容 content</h3><pre id="taskModalContent"></pre></div>
+        <div><h3>完整 publish_results</h3><pre id="taskModalResults"></pre></div>
+        <div><h3>最后一次 raw 回执</h3><pre id="taskModalRaw"></pre></div>
         <div class="row">
           <button id="taskRetryBtn">重新执行</button>
           <span id="taskRetryMsg" class="muted"></span>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="accountModal" class="modal hidden">
+    <div class="modal-panel">
+      <div class="row" style="justify-content:space-between;align-items:flex-start;">
+        <div>
+          <h2 id="accountModalTitle">账号详情</h2>
+          <div id="accountModalMeta" class="muted"></div>
+        </div>
+        <button class="secondary" onclick="closeAccountModal()">关闭</button>
+      </div>
+      <div class="stack" style="margin-top:12px;">
+        <div><h3>账号摘要</h3><pre id="accountModalSummary"></pre></div>
+        <div><h3>apiConfig</h3><pre id="accountModalApiConfig"></pre></div>
+        <div><h3>platformConfig</h3><pre id="accountModalPlatformConfig"></pre></div>
+        <div><h3>最近发布记录</h3><pre id="accountModalRecent"></pre></div>
       </div>
     </div>
   </div>
@@ -193,14 +193,8 @@
       if (!r.ok) throw new Error(data.error || 'request failed');
       return data;
     }
-
-    function uniq(arr) {
-      return [...new Set(arr.filter(Boolean))];
-    }
-
-    function pretty(x) {
-      return JSON.stringify(x ?? null, null, 2);
-    }
+    const uniq = arr => [...new Set(arr.filter(Boolean))];
+    const pretty = x => JSON.stringify(x ?? null, null, 2);
 
     function renderPlatformOptions(selectId, values, label = '全部平台') {
       const el = document.getElementById(selectId);
@@ -223,11 +217,41 @@
         reader.readAsDataURL(file);
       });
       const res = await j('/api/upload-base64', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
+        method: 'POST', headers: {'Content-Type':'application/json'},
         body: JSON.stringify({ filename: file.name, contentType: file.type, data })
       });
       return res.path;
+    }
+
+    function composerAccounts() {
+      const platform = document.getElementById('composerPlatformFilter').value;
+      return accounts.filter(a => !platform || a.platform === platform);
+    }
+
+    function selectedAccount() {
+      return accounts.find(a => a.id === document.getElementById('accountSelect').value);
+    }
+
+    function updateComposer() {
+      const select = document.getElementById('accountSelect');
+      const items = composerAccounts();
+      const current = select.value;
+      select.innerHTML = '';
+      for (const item of items) {
+        const opt = document.createElement('option');
+        opt.value = item.id;
+        opt.textContent = `${item.platform} / ${item.name} ${item.usable ? '' : '(不可用)'}`;
+        select.appendChild(opt);
+      }
+      if (items.find(x => x.id === current)) select.value = current;
+      const acc = selectedAccount();
+      const hint = document.getElementById('platformHint');
+      if (!acc) {
+        hint.textContent = '请选择账号';
+        return;
+      }
+      const s = acc.summary || {};
+      hint.textContent = `限制：最长 ${s.maxText} 字；最多 ${s.maxImages} 张图；${s.supportsVideo ? '支持视频' : '不支持视频'}；${s.supportsLink ? '支持链接' : '不支持链接'}${s.threadHint ? '；长文建议拆线程' : ''}`;
     }
 
     function filteredAccounts() {
@@ -238,10 +262,7 @@
         if (platform && item.platform !== platform) return false;
         if (usable === 'usable' && !item.usable) return false;
         if (usable === 'unusable' && item.usable) return false;
-        if (kw) {
-          const hay = [item.name, item.platform, item.homepageUrl].join(' ').toLowerCase();
-          if (!hay.includes(kw)) return false;
-        }
+        if (kw && ![item.name, item.platform, item.homepageUrl].join(' ').toLowerCase().includes(kw)) return false;
         return true;
       });
     }
@@ -253,36 +274,25 @@
       return records.filter(item => {
         if (platform && item.platform !== platform) return false;
         if (status && item.status !== status) return false;
-        if (kw) {
-          const hay = [item.title, item.taskName, item.text, item.accountName, item.id].join(' ').toLowerCase();
-          if (!hay.includes(kw)) return false;
-        }
+        if (kw && ![item.title, item.taskName, item.text, item.accountName, item.id].join(' ').toLowerCase().includes(kw)) return false;
         return true;
       });
     }
 
     function renderAccounts() {
       const tbody = document.getElementById('accountsBody');
-      const select = document.getElementById('accountSelect');
       const items = filteredAccounts();
       tbody.innerHTML = '';
-      select.innerHTML = '';
       for (const item of items) {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td>${item.name}</td>
+          <td><a href="#" onclick="openAccountModal('${item.id}'); return false;">${item.name}</a></td>
           <td><span class="pill">${item.platform}</span></td>
           <td>${item.homepageUrl ? `<a href="${item.homepageUrl}" target="_blank">主页</a>` : '-'}</td>
           <td>${item.authorizedAt || '-'}</td>
           <td><span class="status ${item.usable ? 'ok' : 'bad'}">${item.usable ? '可用' : '不可用'}</span></td>
         `;
         tbody.appendChild(tr);
-      }
-      for (const item of accounts) {
-        const opt = document.createElement('option');
-        opt.value = item.id;
-        opt.textContent = `${item.platform} / ${item.name} ${item.usable ? '' : '(不可用)'}`;
-        select.appendChild(opt);
       }
     }
 
@@ -301,9 +311,7 @@
               <strong>${item.title || item.taskName || item.id}</strong>
               <div class="muted">${item.platform || '-'} / ${item.accountName || '-'} / task: ${item.id}</div>
             </div>
-            <div>
-              <span class="status ${resultState}">${item.status}</span>
-            </div>
+            <div><span class="status ${resultState}">${item.status}</span></div>
           </div>
           <p style="white-space:pre-wrap;">${(item.text || '').slice(0, 400) || '<无正文>'}</p>
           <div class="muted">创建: ${item.createdAt || '-'} ｜ 发布: ${item.publishedAt || '-'} ${item.homepageUrl ? `｜ <a href="${item.homepageUrl}" target="_blank">账号主页</a>` : ''}</div>
@@ -322,8 +330,11 @@
     async function loadAccounts() {
       const { items } = await j('/api/accounts');
       accounts = items;
-      renderPlatformOptions('accountPlatformFilter', accounts.map(x => x.platform));
+      const platforms = accounts.map(x => x.platform);
+      renderPlatformOptions('accountPlatformFilter', platforms);
+      renderPlatformOptions('composerPlatformFilter', platforms);
       renderAccounts();
+      updateComposer();
     }
 
     async function loadRecords() {
@@ -337,22 +348,33 @@
       const btn = document.getElementById('submitBtn');
       const msg = document.getElementById('submitMsg');
       btn.disabled = true;
-      msg.textContent = '上传媒体并创建任务中...';
+      msg.textContent = '校验并上传媒体中...';
       try {
+        const acc = selectedAccount();
+        if (!acc) throw new Error('请先选择账号');
+        const text = document.getElementById('text').value || '';
+        const link = document.getElementById('link').value || '';
         const files = [...document.getElementById('files').files];
+        const videoCount = files.filter(f => f.type.startsWith('video/')).length;
+        const imageCount = files.length - videoCount;
+        const s = acc.summary || {};
+        if (text.length > s.maxText) throw new Error(`正文超出限制：${acc.platform} 最多 ${s.maxText} 字`);
+        if (imageCount > s.maxImages) throw new Error(`图片数量超出限制：${acc.platform} 最多 ${s.maxImages} 张`);
+        if (!s.supportsVideo && videoCount > 0) throw new Error(`${acc.platform} 当前流程不支持视频`);
+        if (!s.supportsLink && link) throw new Error(`${acc.platform} 当前流程不支持 link 字段`);
+        if (acc.platform === 'pinterest' && imageCount !== 1) throw new Error('Pinterest 必须且只能上传 1 张图片');
+        if (acc.platform === 'threads' && text.length > 500) throw new Error('Threads 最多 500 字');
         const media = [];
         for (const file of files) media.push(await uploadFile(file));
         const payload = {
           targetAccountId: document.getElementById('accountSelect').value,
           title: document.getElementById('title').value,
-          text: document.getElementById('text').value,
-          link: document.getElementById('link').value,
+          text,
+          link,
           media,
         };
         const res = await j('/api/publish', {
-          method: 'POST',
-          headers: {'Content-Type':'application/json'},
-          body: JSON.stringify(payload)
+          method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload)
         });
         msg.textContent = `已创建任务：${res.taskId}`;
         document.getElementById('title').value = '';
@@ -419,18 +441,37 @@
       document.getElementById('taskModal').classList.add('hidden');
     }
 
+    async function openAccountModal(accountId) {
+      const { item } = await j(`/api/accounts/${accountId}`);
+      document.getElementById('accountModalTitle').textContent = item.name;
+      document.getElementById('accountModalMeta').textContent = `${item.platform} / ${item.status} / ${item.usable ? '可用' : '不可用'} / ${item.homepageUrl || '-'}`;
+      document.getElementById('accountModalSummary').textContent = pretty({
+        id: item.id,
+        accountId: item.accountId,
+        authorizedAt: item.authorizedAt,
+        positioning: item.positioning,
+        targetAudience: item.targetAudience,
+        contentDirection: item.contentDirection,
+        summary: item.summary,
+      });
+      document.getElementById('accountModalApiConfig').textContent = pretty(item.apiConfig || {});
+      document.getElementById('accountModalPlatformConfig').textContent = pretty(item.platformConfig || {});
+      document.getElementById('accountModalRecent').textContent = pretty(item.recentTasks || []);
+      document.getElementById('accountModal').classList.remove('hidden');
+    }
+
+    function closeAccountModal() {
+      document.getElementById('accountModal').classList.add('hidden');
+    }
+
     async function login() {
       const btn = document.getElementById('loginBtn');
       const msg = document.getElementById('loginMsg');
       btn.disabled = true;
       try {
         const res = await j('/api/login', {
-          method: 'POST',
-          headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({
-            username: document.getElementById('loginUser').value,
-            password: document.getElementById('loginPassword').value,
-          })
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ username: document.getElementById('loginUser').value, password: document.getElementById('loginPassword').value })
         });
         msg.textContent = '登录成功';
         await bootstrapApp(res.username);
@@ -453,10 +494,7 @@
       refreshTimer = setInterval(async () => {
         try {
           await Promise.all([loadAccounts(), loadRecords()]);
-          if (currentTaskId) {
-            const modal = document.getElementById('taskModal');
-            if (!modal.classList.contains('hidden')) await openTaskModal(currentTaskId);
-          }
+          if (currentTaskId && !document.getElementById('taskModal').classList.contains('hidden')) await openTaskModal(currentTaskId);
         } catch {}
       }, 15000);
     }
@@ -484,16 +522,15 @@
     document.getElementById('loginBtn').addEventListener('click', login);
     document.getElementById('logoutBtn').addEventListener('click', logout);
     document.getElementById('submitBtn').addEventListener('click', submitPost);
-    document.getElementById('refreshBtn').addEventListener('click', async () => {
-      await loadAccounts();
-      await loadRecords();
-    });
+    document.getElementById('refreshBtn').addEventListener('click', async () => { await loadAccounts(); await loadRecords(); });
     document.getElementById('accountPlatformFilter').addEventListener('change', renderAccounts);
     document.getElementById('accountUsableFilter').addEventListener('change', renderAccounts);
     document.getElementById('accountSearch').addEventListener('input', renderAccounts);
     document.getElementById('recordPlatformFilter').addEventListener('change', renderRecords);
     document.getElementById('recordStatusFilter').addEventListener('change', renderRecords);
     document.getElementById('recordSearch').addEventListener('input', renderRecords);
+    document.getElementById('composerPlatformFilter').addEventListener('change', updateComposer);
+    document.getElementById('accountSelect').addEventListener('change', updateComposer);
 
     restoreSession();
   </script>
