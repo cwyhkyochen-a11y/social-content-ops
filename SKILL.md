@@ -5,7 +5,15 @@ description: Social media content operations automation system with SQLite datab
 
 # Content Ops System
 
-社交媒体内容运营自动化系统，使用 **SQLite + Drizzle ORM** 存储数据，支持内容抓取、语料审核、发布任务管理、多平台发布和数据分析。当前已经重点打通 **X API 发布链路**，并开始接入统一调度层。
+社交媒体内容运营自动化系统，使用 **SQLite + Drizzle ORM** 存储数据，支持内容抓取、语料审核、发布任务管理、多平台发布和数据分析。
+
+**核心能力：**
+- 📥 小红书内容抓取（MCP 服务）
+- 🚀 多平台发布：X (Twitter)、Threads、Facebook、Pinterest、Instagram、小红书
+- 🖥️ Web 控制台：可视化任务管理、账号管理、发布记录查看
+- 📊 统一调度入口（publish-dispatch.py）+ 发布日志回写
+- 🎨 AI 配图生成（集成 baoyu-skills）
+- 🔐 X API OAuth 授权 + Token 自动刷新
 
 ---
 
@@ -27,16 +35,44 @@ description: Social media content operations automation system with SQLite datab
 
 目前项目里最实用、最稳定的能力集中在：
 
-- `x_post_api.ts` / `x_post_api.sh`：X API 文本 / thread / 图片发布
-- `x_refresh_token.ts`：X token 刷新
-- `publish-dispatch.py`：统一发布调度入口
-- `publish-log.ts`：通用发布日志回写
-- `x_publish_pw.py`：X 浏览器自动化旧路线（保留，但不再优先）
-- `instagram_publish.py` / `instagram_publish_pw.py`
-- `pinterest_publish.py`
-- `threads_publish.py`
+**发布能力（已接入统一调度）：**
+- **X (Twitter)**：`x_post_api.ts` / `x_post_api.sh` - API 路线支持文本、thread、图片
+- **Threads**：`threads_publish.py` - 文本、图片、视频、Carousel
+- **Facebook**：`facebook_publish.py` - 个人主页、页面发布
+- **Pinterest**：`pinterest_publish.py` - Pin 发布、Board 管理
+- **Instagram**：`instagram_publish.py` - 图片、Carousel、Story（浏览器自动化）
+- **小红书**：`redbookskills/` - 图文/视频发布子技能
 
-### 0.2 X 当前结论
+**基础设施：**
+- `publish-dispatch.py`：统一发布调度入口（task-driven）
+- `publish-log.ts`：通用发布日志回写
+- `x_refresh_token.ts`：X token 自动刷新
+- `console-server.mjs`：Web 控制台服务端
+- `console-public/index.html`：Web 控制台前端
+
+### 0.2 Web 控制台（v0.3.0 新增）
+
+提供可视化界面管理整个内容运营流程：
+
+**功能：**
+- 登录认证（可自定义账号密码）
+- 平台 / 账号筛选管理
+- 手动创建发布任务
+- 上传图片 / 视频
+- 查看发布记录（成功 / 失败 / 待执行）
+- 查看任务详情和 `publish_results.raw`
+- 手动执行 / 重新执行发布
+- 按平台动态做前后端校验
+
+**启动：**
+```bash
+npm run console
+# 默认监听 127.0.0.1:3210
+```
+
+**公网部署：** 支持 Caddy/Nginx 子路径反代，见 `docs/CONSOLE.md`
+
+### 0.3 X 当前结论
 
 X 当前保留两条路线，但优先级已经变化：
 
@@ -62,24 +98,25 @@ X 当前保留两条路线，但优先级已经变化：
   - 数据中心 IP 容易被拦截
 - 结论：**保留，但不再作为主线**
 
-### 0.3 通用发布日志现状
+### 0.4 通用发布日志现状
 
 当前发布结果统一写入：
 
 - `publish_tasks.content.publish_results`
 
-这套结构不是只给 X 用的，后续可供 Pinterest / Threads / Facebook / Instagram 复用。
+这套结构已供 X / Threads / Facebook / Pinterest 复用，Instagram 和小红书走独立链路。
 
-### 0.4 当前已知限制
+### 0.5 当前已知限制
 
 - X 视频上传还未完成
 - 小红书详情抓取仍然受网页端限制
+- Instagram 仅支持浏览器自动化路线
 
-### 0.5 下一版本 Roadmap
+### 0.6 下一版本 Roadmap
 
 以下项目已确定为下一版本目标：
 
-- 其他平台升级到与 X 同级别的任务驱动模式
+- Instagram API 路线调研
 - 更完整的统一 scheduler / retry 机制
 - X 视频上传完成
 
@@ -145,9 +182,11 @@ tar -xzf xiaohongshu-mcp-linux-amd64.tar.gz
 ```bash
 export X_CLIENT_ID='你的 client id'
 export X_CLIENT_SECRET='你的 client secret'
-export X_REDIRECT_URI='https://xauth.kyochen.art/auth/x/callback'
+export X_REDIRECT_URI='https://your-domain.com/auth/x/callback'
 export X_SCOPES='tweet.read tweet.write users.read offline.access'
 ```
+
+**注意：** OAuth 回调域名需要与 X Developer Portal 中配置的回调地址一致，且必须可公网访问。
 
 ### 3.2 发文本
 
@@ -228,6 +267,17 @@ python skills/content-ops/scripts/publish-dispatch.py \
   --platform x --account main --text "hello" --x-mode browser
 ```
 
+### 4.4 支持的平台
+
+| 平台 | 脚本 | 接入统一调度 | 支持内容 |
+|------|------|-------------|---------|
+| X (Twitter) | `x_post_api.ts` / `x_publish_pw.py` | ✅ | 文本、thread、图片 |
+| Threads | `threads_publish.py` | ✅ | 文本、图片、视频、Carousel |
+| Facebook | `facebook_publish.py` | ✅ | 文本、图片、视频 |
+| Pinterest | `pinterest_publish.py` | ✅ | Pin、Board 管理 |
+| Instagram | `instagram_publish.py` | ❌（浏览器自动化）| 图片、Carousel、Story |
+| 小红书 | `redbookskills/` | ❌（子技能）| 图文、视频 |
+
 ---
 
 ## 五、抓取与发布工作流
@@ -267,13 +317,13 @@ python skills/content-ops/scripts/publish-dispatch.py --task-id <publish-task-id
 
 ## 六、参考文档
 
-- `README.md`
-- `docs/X_API_SETUP.md`
-- `docs/X_API_OPERATIONS.md`
-- `docs/X_ACCOUNT_KYO.md`
-- `docs/PUBLISH_DISPATCH.md`
-- `docs/PUBLISH_LOGS.md`
-- `references/database-schema.md`
+- `README.md` - 项目总览
+- `docs/CONSOLE.md` - Web 控制台使用说明
+- `docs/X_API_SETUP.md` - X API 接入配置
+- `docs/X_API_OPERATIONS.md` - X API 日常操作
+- `docs/PUBLISH_DISPATCH.md` - 统一调度入口说明
+- `docs/PUBLISH_LOGS.md` - 发布日志结构
+- `references/database-schema.md` - 数据库表结构
 
 ---
 
