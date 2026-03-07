@@ -52,5 +52,8 @@ app.get('/api/publish-records', requireAuth, (req,res)=>res.json({items:listPubl
 app.get('/api/publish/:taskId', requireAuth, (req,res)=>{ const item=getPublishRecord(req.params.taskId); if(!item) return res.status(404).json({error:'task not found'}); res.json({item}); });
 app.post('/api/upload-base64', requireAuth, (req,res)=>{ try { const {filename,contentType,data}=req.body||{}; if(!data) return res.status(400).json({error:'missing data'}); const safeName=String(filename||`upload-${Date.now()}`).replace(/[^a-zA-Z0-9._-]/g,'_'); const ext=path.extname(safeName)||(String(contentType||'').includes('video')?'.mp4':'.bin'); const finalName=path.basename(safeName,path.extname(safeName))+ext; const outPath=path.join(MEDIA_DIR,`${Date.now()}-${finalName}`); const base64=String(data).includes(',')?String(data).split(',').pop():String(data); fs.writeFileSync(outPath,Buffer.from(base64,'base64')); res.json({ok:true,path:outPath,url:`/uploads/${path.basename(outPath)}`}); } catch (e) { res.status(500).json({error:e?.message||String(e)}); } });
 app.get('/api/health', (_req,res)=>res.json({ok:true,host:HOST,port:PORT}));
-app.use((_req,res)=>res.sendFile(path.join(PUBLIC_DIR,'index.html')));
+app.use((_req,res)=>{
+  const indexPath = path.join(PUBLIC_DIR, 'index.html');
+  res.type('html').send(fs.readFileSync(indexPath, 'utf8'));
+});
 app.listen(PORT, HOST, ()=>console.log(`content-ops console listening on http://${HOST}:${PORT}`));
