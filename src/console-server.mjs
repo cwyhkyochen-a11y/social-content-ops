@@ -19,10 +19,22 @@ const MEDIA_DIR = path.join(WORKSPACE_ROOT, 'content-ops-workspace', 'console-up
 const DB_PATH = process.env.CONTENT_OPS_DB || path.join(WORKSPACE_ROOT, 'content-ops-workspace', 'data', 'content-ops.db');
 const SESSION_COOKIE = 'content_ops_console_session';
 const SESSION_SECRET = process.env.CONTENT_OPS_CONSOLE_SESSION_SECRET || 'content-ops-console-secret';
+const SESSION_TIMEOUT_MS = 8 * 60 * 60 * 1000; // 8 小时
 const DEFAULT_USER = process.env.CONTENT_OPS_CONSOLE_USER || 'kyochen';
 const DEFAULT_PASSWORD = process.env.CONTENT_OPS_CONSOLE_PASSWORD || 'kyochen28';
 const sessions = new Map();
 const db = new Database(DB_PATH, { readonly: false });
+
+// 定期清理过期 session（每小时）
+setInterval(() => {
+  const now = Date.now();
+  for (const [sid, session] of sessions.entries()) {
+    if (now - session.createdAt > SESSION_TIMEOUT_MS) {
+      sessions.delete(sid);
+      console.log(`[Session] Expired and removed: ${sid}`);
+    }
+  }
+}, 60 * 60 * 1000);
 
 fs.mkdirSync(PUBLIC_DIR, { recursive: true });
 fs.mkdirSync(MEDIA_DIR, { recursive: true });
@@ -34,7 +46,21 @@ app.use('/uploads', express.static(MEDIA_DIR));
 const safeJsonParse = (value, fallback) => { try { return value ? (typeof value === 'string' ? JSON.parse(value) : value) : fallback; } catch { return fallback; } };
 const signSession = (id) => `${id}.${crypto.createHmac('sha256', SESSION_SECRET).update(id).digest('hex')}`;
 const verifySignedSession = (raw) => { if (!raw) return null; const i = raw.lastIndexOf('.'); if (i <= 0) return null; const id = raw.slice(0, i); const sig = raw.slice(i + 1); const exp = crypto.createHmac('sha256', SESSION_SECRET).update(id).digest('hex'); return sig === exp ? id : null; };
-const requireAuth = (req, res, next) => { const sid = verifySignedSession(req.cookies?.[SESSION_COOKIE]); if (!sid || !sessions.has(sid)) return res.status(401).json({ error: 'unauthorized' }); req.session = sessions.get(sid); next(); };
+const requireAuth = (req, res, next) => { 
+  const sid = verifySignedSession(req.cookies?.[SESSION_COOKIE]); 
+  if (!sid || !sessions.has(sid)) {
+    return res.status(401).json({ error: 'unauthorized' }); 
+  }
+  const session = sessions.get(sid);
+  // 检查 session 是否过期
+  if (Date.now() - session.createdAt > SESSION_TIMEOUT_MS) {
+    sessions.delete(sid);
+    res.clearCookie(SESSION_COOKIE);
+    return res.status(401).json({ error: 'session expired' });
+  }
+  req.session = session;
+  next(); 
+};
 const extractAuthorizedAt = (row) => { const api = safeJsonParse(row.api_config, {}); return api.authorized_at || api.created_at || row.created_at || null; };
 const isAccountUsable = (row) => { if (row.status !== 'active') return false; const api = safeJsonParse(row.api_config, {}); if (row.platform === 'x') return !!(api.access_token || api.password || api.refresh_token); return !!(api.access_token || api.token || api.password || api.token_file || api.access_token_file); };
 const normalizePlatformConfig = (row) => { const apiConfig = safeJsonParse(row.api_config, {}); const platformConfig = safeJsonParse(row.platform_config, {}); const summary = ({ x:{maxText:platformConfig.max_chars||280,maxImages:platformConfig.max_images||4,supportsVideo:true,supportsLink:false,threadHint:true}, threads:{maxText:platformConfig.max_text_length||500,maxImages:platformConfig.max_carousel_images||10,supportsVideo:true,supportsLink:false,threadHint:false}, pinterest:{maxText:500,maxImages:1,supportsVideo:false,supportsLink:true,threadHint:false}, facebook:{maxText:63206,maxImages:platformConfig.max_photos_per_post||10,supportsVideo:true,supportsLink:true,threadHint:false}, instagram:{maxText:2200,maxImages:10,supportsVideo:true,supportsLink:false,threadHint:false} })[row.platform] || {maxText:1000,maxImages:4,supportsVideo:true,supportsLink:true,threadHint:false}; return { apiConfig, platformConfig, summary }; };
@@ -43,15 +69,101 @@ const listPublishRecords = (limit=100) => db.prepare(`select pt.*, ta.account_na
 const getPublishRecord = (taskId) => listPublishRecords(1000).find(x => x.id === taskId) || null;
 const getAccountDetail = (accountId) => { const row = db.prepare('select * from target_accounts where id=? limit 1').get(accountId); if (!row) return null; const recentTasks = db.prepare('select id, task_name, status, content, created_at, published_at, review_notes from publish_tasks where target_account_id=? order by created_at desc limit 20').all(accountId).map(r => ({...r, content:safeJsonParse(r.content,{})})); return { id:row.id,name:row.account_name,platform:row.platform,homepageUrl:row.homepage_url,authorizedAt:extractAuthorizedAt(row),status:row.status,usable:isAccountUsable(row),accountId:row.account_id,positioning:row.positioning,targetAudience:row.target_audience,contentDirection:row.content_direction,...normalizePlatformConfig(row),recentTasks }; };
 
-app.post('/api/login', (req,res)=>{ const {username,password}=req.body||{}; if(username!==DEFAULT_USER||password!==DEFAULT_PASSWORD) return res.status(401).json({error:'invalid credentials'}); const sid=randomUUID(); sessions.set(sid,{username,createdAt:new Date().toISOString()}); res.cookie(SESSION_COOKIE,signSession(sid),{httpOnly:true,sameSite:'lax',secure:false,maxAge:7*24*60*60*1000}); res.json({ok:true,username}); });
-app.post('/api/logout', (req,res)=>{ const sid=verifySignedSession(req.cookies?.[SESSION_COOKIE]); if(sid) sessions.delete(sid); res.clearCookie(SESSION_COOKIE); res.json({ok:true}); });
-app.get('/api/session', (req,res)=>{ const sid=verifySignedSession(req.cookies?.[SESSION_COOKIE]); const s=sid?sessions.get(sid):null; res.json({authenticated:!!s,username:s?.username||null}); });
+app.post('/api/login', (req,res)=>{ 
+  const {username,password}=req.body||{}; 
+  if(username!==DEFAULT_USER||password!==DEFAULT_PASSWORD) return res.status(401).json({error:'invalid credentials'}); 
+  const sid=randomUUID(); 
+  sessions.set(sid,{username,createdAt:Date.now()}); 
+  res.cookie(SESSION_COOKIE,signSession(sid),{httpOnly:true,sameSite:'lax',secure:false,maxAge:SESSION_TIMEOUT_MS}); 
+  console.log(`[Session] Created: ${sid} for user ${username}`);
+  res.json({ok:true,username,expiresIn:SESSION_TIMEOUT_MS}); 
+});
+app.post('/api/logout', (req,res)=>{ 
+  const sid=verifySignedSession(req.cookies?.[SESSION_COOKIE]); 
+  if(sid) {
+    sessions.delete(sid); 
+    console.log(`[Session] Logged out: ${sid}`);
+  }
+  res.clearCookie(SESSION_COOKIE); 
+  res.json({ok:true}); 
+});
+app.get('/api/session', (req,res)=>{ 
+  const sid=verifySignedSession(req.cookies?.[SESSION_COOKIE]); 
+  const s=sid?sessions.get(sid):null; 
+  if (s && Date.now() - s.createdAt > SESSION_TIMEOUT_MS) {
+    sessions.delete(sid);
+    res.clearCookie(SESSION_COOKIE);
+    return res.json({authenticated:false,username:null,expired:true});
+  }
+  res.json({
+    authenticated:!!s,
+    username:s?.username||null,
+    expiresAt: s ? new Date(s.createdAt + SESSION_TIMEOUT_MS).toISOString() : null
+  }); 
+});
 app.get('/api/accounts', requireAuth, (_req,res)=>res.json({items:listAccounts()}));
 app.get('/api/accounts/:accountId', requireAuth, (req,res)=>{ const item=getAccountDetail(req.params.accountId); if(!item) return res.status(404).json({error:'account not found'}); res.json({item}); });
 app.get('/api/publish-records', requireAuth, (req,res)=>res.json({items:listPublishRecords(Number(req.query.limit||100))}));
 app.get('/api/publish/:taskId', requireAuth, (req,res)=>{ const item=getPublishRecord(req.params.taskId); if(!item) return res.status(404).json({error:'task not found'}); res.json({item}); });
 app.post('/api/upload-base64', requireAuth, (req,res)=>{ try { const {filename,contentType,data}=req.body||{}; if(!data) return res.status(400).json({error:'missing data'}); const safeName=String(filename||`upload-${Date.now()}`).replace(/[^a-zA-Z0-9._-]/g,'_'); const ext=path.extname(safeName)||(String(contentType||'').includes('video')?'.mp4':'.bin'); const finalName=path.basename(safeName,path.extname(safeName))+ext; const outPath=path.join(MEDIA_DIR,`${Date.now()}-${finalName}`); const base64=String(data).includes(',')?String(data).split(',').pop():String(data); fs.writeFileSync(outPath,Buffer.from(base64,'base64')); res.json({ok:true,path:outPath,url:`/uploads/${path.basename(outPath)}`}); } catch (e) { res.status(500).json({error:e?.message||String(e)}); } });
 app.get('/api/health', (_req,res)=>res.json({ok:true,host:HOST,port:PORT}));
+
+// Composio 相关 API
+app.post('/api/composio/authorize', requireAuth, async (req, res) => {
+  try {
+    const { entity_id, platform } = req.body || {};
+    if (!entity_id || !platform) {
+      return res.status(400).json({ error: 'missing entity_id or platform' });
+    }
+    
+    // 调用 Python 脚本获取授权链接
+    const { execSync } = await import('child_process');
+    const scriptPath = path.join(SRC_DIR, 'composio_publisher.py');
+    
+    const cmd = `python3 "${scriptPath}" --entity-id "${entity_id}" --platform "${platform}" --authorize`;
+    const output = execSync(cmd, { 
+      cwd: ROOT,
+      encoding: 'utf8',
+      env: { ...process.env }
+    });
+    
+    // 提取 URL
+    const urlMatch = output.match(/https:\/\/[^\s]+/);
+    if (!urlMatch) {
+      return res.status(500).json({ error: 'failed to extract auth URL', output });
+    }
+    
+    res.json({ auth_url: urlMatch[0] });
+  } catch (e) {
+    res.status(500).json({ error: e?.message || String(e) });
+  }
+});
+
+app.post('/api/composio/check', requireAuth, async (req, res) => {
+  try {
+    const { entity_id, platform } = req.body || {};
+    if (!entity_id || !platform) {
+      return res.status(400).json({ error: 'missing entity_id or platform' });
+    }
+    
+    // 调用 Python 脚本检查连接
+    const { execSync } = await import('child_process');
+    const scriptPath = path.join(SRC_DIR, 'composio_publisher.py');
+    
+    const cmd = `python3 "${scriptPath}" --entity-id "${entity_id}" --platform "${platform}" --check`;
+    const output = execSync(cmd, { 
+      cwd: ROOT,
+      encoding: 'utf8',
+      env: { ...process.env }
+    });
+    
+    const connected = output.includes('已连接') || output.includes('connected');
+    res.json({ connected, output: output.trim() });
+  } catch (e) {
+    res.json({ connected: false, error: e?.message || String(e) });
+  }
+});
+
 app.use((_req,res)=>{
   const indexPath = path.join(PUBLIC_DIR, 'index.html');
   res.type('html').send(fs.readFileSync(indexPath, 'utf8'));

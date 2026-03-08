@@ -5,6 +5,10 @@ Unified publishing dispatcher.
 Supports two modes:
 1. Config mode (legacy): build commands from accounts.local.json
 2. Task mode: load publish task from DB and dispatch to platform-specific publisher
+
+Supports two auth modes:
+- self: use own API implementation (default)
+- composio: use Composio integration
 """
 
 import argparse
@@ -19,7 +23,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 CONFIG_PATH = ROOT / "content-ops-workspace" / "config" / "accounts.local.json"
 SCRIPTS_DIR = ROOT / "skills" / "content-ops" / "scripts"
+SRC_DIR = ROOT / "skills" / "content-ops" / "src"
 DB_PATH = Path(os.environ.get("CONTENT_OPS_DB", str(ROOT / "content-ops-workspace" / "data" / "content-ops.db")))
+
+# Add src to path for Composio import
+sys.path.insert(0, str(SRC_DIR))
 
 
 class ConfigError(Exception):
@@ -52,7 +60,8 @@ def load_publish_task(task_id: str):
     row = conn.execute(
         """
         select pt.id, pt.task_name, pt.target_account_id, pt.status, pt.content, pt.generated_images,
-               ta.platform, ta.account_name, ta.account_id, ta.api_config, ta.platform_config
+               ta.platform, ta.account_name, ta.account_id, ta.api_config, ta.platform_config,
+               ta.auth_mode, ta.composio_user_id
         from publish_tasks pt
         join target_accounts ta on ta.id = pt.target_account_id
         where pt.id = ?
@@ -292,6 +301,86 @@ def build_threads(job, acct):
     return cmd
 
 
+def publish_via_composio(task, job):
+    """
+    使用 Composio 发布
+    
+    Args:
+        task: 任务信息（包含 auth_mode, composio_user_id）
+        job: 发布任务详情
+    
+    Returns:
+        发布结果
+    """
+    try:
+        from composio_publisher import ComposioPublisher
+    except ImportError:
+        raise ConfigError(
+            "Composio publisher not found. "
+            "Make sure composio_publisher.py is in src/ and composio-core is installed."
+        )
+    
+    entity_id = task.get("composio_user_id")
+    if not entity_id:
+        raise ConfigError(f"composio_user_id not set for account {task.get('target_account_id')}")
+    
+    platform = job["platform"]
+    text = job.get("text", "")
+    
+    # 初始化 Composio 发布器
+    try:
+        publisher = ComposioPublisher()
+    except ValueError as e:
+        raise ConfigError(f"Composio initialization failed: {e}")
+    
+    # 检查连接状态
+    if not publisher.check_connection(entity_id, platform):
+        auth_url = publisher.get_authorization_url(entity_id, platform)
+        raise ConfigError(
+            f"Platform {platform} not connected for entity {entity_id}.\n"
+            f"Please authorize at: {auth_url}"
+        )
+    
+    # 发布内容
+    print(f"# Publishing via Composio")
+    print(f"  Entity ID: {entity_id}")
+    print(f"  Platform: {platform}")
+    print(f"  Text: {text[:50]}...")
+    
+    try:
+        # 检查是否需要发 thread
+        if platform in ('twitter', 'x') and len(text) > 260:
+            # 简单拆分（实际应该用更智能的方式）
+            texts = [text[i:i+260] for i in range(0, len(text), 260)]
+            result = publisher.publish_twitter_thread(entity_id, texts)
+        else:
+            result = publisher.publish(
+                entity_id=entity_id,
+                platform=platform,
+                action='create_post',
+                params={'text': text}
+            )
+        
+        # 标准化结果
+        return {
+            "platform": platform,
+            "accountId": task.get("target_account_id"),
+            "platformPostId": result.get("data", {}).get("id"),
+            "url": result.get("data", {}).get("url"),
+            "textPreview": text[:140],
+            "raw": result,
+            "media": {
+                "type": "text",
+                "count": 0,
+                "items": [],
+            },
+            "via": "composio",
+        }
+    
+    except Exception as e:
+        raise ConfigError(f"Composio publish failed: {e}")
+
+
 def normalize_publish_result(platform, task, job, parsed_output):
     if not isinstance(parsed_output, dict):
         raise ConfigError(f"{platform} publisher did not return JSON object")
@@ -378,6 +467,33 @@ def main():
         task = load_publish_task(args.task_id)
         job = derive_job_from_task(task)
         platform = job["platform"]
+        
+        # 检查是否使用 Composio
+        auth_mode = task.get("auth_mode", "self")
+        
+        if auth_mode == "composio":
+            # 使用 Composio 发布
+            print(f"# Using Composio for {platform}")
+            
+            if not args.execute:
+                print(f"# Would publish via Composio:")
+                print(f"  Entity ID: {task.get('composio_user_id')}")
+                print(f"  Platform: {platform}")
+                print(f"  Text: {job.get('text', '')[:50]}...")
+                print("\nNot executed. Add --execute to publish.")
+                return 0
+            
+            # 执行 Composio 发布
+            normalized = publish_via_composio(task, job)
+            update_publish_task_result(task["id"], normalized)
+            print(json.dumps({
+                "status": "published",
+                "taskId": task["id"],
+                "result": normalized,
+            }, ensure_ascii=False, indent=2))
+            return 0
+        
+        # 使用自有实现
         acct = {
             "account_id": task.get("target_account_id"),
             **(task.get("api_config") or {}),

@@ -1,538 +1,502 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>content-ops 控制台</title>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Content-Ops 控制台</title>
   <style>
-    body { font-family: Inter, system-ui, sans-serif; margin: 0; background: #0b1020; color: #eef2ff; }
-    .wrap { max-width: 1240px; margin: 0 auto; padding: 24px; }
-    h1,h2,h3 { margin: 0 0 12px; }
-    .grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 20px; }
-    .card { background: #121935; border: 1px solid #243056; border-radius: 16px; padding: 18px; box-shadow: 0 6px 24px rgba(0,0,0,.2); }
-    .muted { color: #9fb0e0; font-size: 13px; }
-    .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-    input, select, textarea, button { border-radius: 10px; border: 1px solid #34457a; background: #0c1430; color: #eef2ff; padding: 10px 12px; }
-    input, select, textarea { width: 100%; box-sizing: border-box; }
-    textarea { min-height: 140px; resize: vertical; }
-    button { cursor: pointer; background: #365dff; border-color: #365dff; font-weight: 600; }
-    button.secondary { background: transparent; }
-    table { width: 100%; border-collapse: collapse; font-size: 14px; }
-    th, td { padding: 10px 8px; border-bottom: 1px solid #243056; text-align: left; vertical-align: top; }
-    .status { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; }
-    .ok { background: #173d2b; color: #84f0b0; }
-    .bad { background: #4a1f28; color: #ff99aa; }
-    .pill { display:inline-block; padding:2px 8px; border-radius:999px; background:#1d284a; color:#c7d2fe; font-size:12px; margin-right:6px; }
-    .stack { display: grid; gap: 10px; }
-    .record { border: 1px solid #243056; border-radius: 12px; padding: 12px; margin-bottom: 10px; }
-    a { color: #8ab4ff; }
-    .hidden { display: none; }
-    .toolbar { display:flex; gap:10px; align-items:center; justify-content:space-between; margin-bottom: 18px; }
-    .filters { display:grid; grid-template-columns: 180px 220px 1fr; gap:10px; margin-bottom: 14px; }
-    .login-box { max-width: 420px; margin: 12vh auto; }
-    pre { white-space: pre-wrap; word-break: break-word; background:#0a1128; border:1px solid #243056; border-radius:12px; padding:12px; max-height: 360px; overflow:auto; }
-    .modal { position: fixed; inset: 0; background: rgba(0,0,0,.55); display:flex; align-items:center; justify-content:center; padding:20px; }
-    .modal-panel { width:min(1000px, 100%); max-height:90vh; overflow:auto; background:#121935; border:1px solid #243056; border-radius:16px; padding:18px; }
-    .hint { font-size: 12px; color: #89a0da; }
-    @media (max-width: 900px) { .grid, .filters { grid-template-columns: 1fr; } }
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#0f172a;color:#e2e8f0}
+.container{max-width:1400px;margin:0 auto;padding:20px}
+.header{display:flex;justify-content:space-between;align-items:center;padding:20px 0;border-bottom:1px solid #334155;margin-bottom:30px}
+.header h1{font-size:24px;font-weight:600}
+.user-info{display:flex;gap:15px;align-items:center}
+.tabs{display:flex;gap:10px;margin-bottom:30px;border-bottom:2px solid #334155}
+.tab{padding:12px 24px;cursor:pointer;border-bottom:3px solid transparent;transition:all .2s}
+.tab:hover{background:#1e293b}
+.tab.active{border-bottom-color:#3b82f6;color:#3b82f6}
+.card{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:20px;margin-bottom:20px}
+.card-title{font-size:18px;font-weight:600;margin-bottom:15px}
+button{padding:10px 20px;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;transition:all .2s}
+.btn-primary{background:#3b82f6;color:#fff}
+.btn-primary:hover{background:#2563eb}
+.btn-secondary{background:#475569;color:#fff}
+.btn-secondary:hover{background:#64748b}
+.btn-success{background:#10b981;color:#fff}
+.btn-danger{background:#ef4444;color:#fff}
+.btn-sm{padding:6px 12px;font-size:13px}
+input,select,textarea{width:100%;padding:10px;border:1px solid #334155;border-radius:8px;background:#0f172a;color:#e2e8f0;font-size:14px}
+textarea{min-height:120px;resize:vertical;font-family:inherit}
+label{display:block;margin-bottom:8px;font-size:14px;font-weight:500}
+.form-group{margin-bottom:20px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:12px;text-align:left;border-bottom:1px solid #334155}
+th{font-weight:600;color:#94a3b8;font-size:13px;text-transform:uppercase}
+tr:hover{background:#1e293b}
+.badge{display:inline-block;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:500}
+.badge-success{background:#10b98120;color:#10b981}
+.badge-error{background:#ef444420;color:#ef4444}
+.badge-warning{background:#f59e0b20;color:#f59e0b}
+.badge-info{background:#3b82f620;color:#3b82f6}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:1000}
+.modal.show{display:flex}
+.modal-content{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:30px;max-width:800px;width:90%;max-height:90vh;overflow-y:auto}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.modal-title{font-size:20px;font-weight:600}
+.hidden{display:none!important}
+.flex{display:flex}
+.gap-2{gap:10px}
+.gap-4{gap:20px}
+.items-center{align-items:center}
+.justify-between{justify-content:space-between}
+.mb-4{margin-bottom:20px}
+.text-sm{font-size:13px}
+.text-muted{color:#94a3b8}
+.grid{display:grid}
+.grid-2{grid-template-columns:repeat(2,1fr)}
+.login-container{max-width:400px;margin:100px auto}
+.multi-select{border:1px solid #334155;border-radius:8px;padding:10px;max-height:200px;overflow-y:auto;background:#0f172a}
+.multi-select-item{padding:8px;cursor:pointer;border-radius:6px;margin-bottom:4px;display:flex;align-items:center}
+.multi-select-item:hover{background:#334155}
+.multi-select-item.selected{background:#3b82f620;border:1px solid #3b82f6}
+.multi-select-item input{margin-right:8px}
+pre{background:#0f172a;padding:12px;border-radius:8px;overflow-x:auto;font-size:13px}
   </style>
 </head>
 <body>
-  <div id="loginView" class="wrap login-box">
-    <section class="card">
-      <h1>content-ops 控制台登录</h1>
-      <p class="muted">默认账号已按你的要求预置。</p>
-      <div class="stack">
-        <label>用户名
-          <input id="loginUser" value="kyochen" />
-        </label>
-        <label>密码
-          <input id="loginPassword" type="password" value="kyochen28" />
-        </label>
-        <div class="row">
-          <button id="loginBtn">登录</button>
-          <span id="loginMsg" class="muted"></span>
-        </div>
-      </div>
-    </section>
+<div id="loginView" class="login-container">
+  <div class="card">
+    <h1 class="mb-4">登录</h1>
+    <div class="form-group">
+      <label>用户名</label>
+      <input id="loginUser" value="kyochen"/>
+    </div>
+    <div class="form-group">
+      <label>密码</label>
+      <input id="loginPass" type="password" value="kyochen28"/>
+    </div>
+    <button class="btn-primary" onclick="login()" style="width:100%">登录</button>
+    <p id="loginMsg" class="text-muted text-sm" style="margin-top:10px"></p>
   </div>
+</div>
 
-  <div id="appView" class="wrap hidden">
-    <div class="toolbar">
-      <div>
-        <h1>content-ops 控制台</h1>
-        <p class="muted">账号详情页 + 按平台动态校验的任务创建已经接入。</p>
-      </div>
-      <div class="row">
-        <span id="whoami" class="muted"></span>
-        <button class="secondary" id="logoutBtn">退出登录</button>
+<div id="appView" class="hidden">
+  <div class="container">
+    <div class="header">
+      <h1>Content-Ops 控制台</h1>
+      <div class="user-info">
+        <span id="username" class="text-muted"></span>
+        <button class="btn-secondary btn-sm" onclick="logout()">退出</button>
       </div>
     </div>
 
-    <div class="grid">
-      <section class="card">
-        <h2>手动提交发帖任务</h2>
-        <div class="stack">
-          <label>平台过滤
-            <select id="composerPlatformFilter"><option value="">全部平台</option></select>
-          </label>
-          <label>目标账号
-            <select id="accountSelect"></select>
-          </label>
-          <div id="platformHint" class="hint"></div>
-          <label>标题 / 任务名
-            <input id="title" placeholder="可留空，默认自动生成" />
-          </label>
-          <label>正文
-            <textarea id="text" placeholder="输入要发布的正文"></textarea>
-          </label>
-          <label>链接
-            <input id="link" placeholder="可选，例如 https://example.com" />
-          </label>
-          <label>图片/视频上传（可多选）
-            <input id="files" type="file" multiple />
-          </label>
-          <div class="row">
-            <button id="submitBtn">创建发布任务</button>
-            <button class="secondary" id="refreshBtn">刷新数据</button>
-            <span id="submitMsg" class="muted"></span>
-          </div>
-        </div>
-      </section>
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('accounts')">账号管理</div>
+      <div class="tab" onclick="switchTab('records')">发布记录</div>
+      <div class="tab" onclick="switchTab('publish')">发布工作台</div>
+    </div>
 
-      <section class="card">
-        <h2>代运营账号列表</h2>
-        <p class="muted">只读；不能手动新增/删除。</p>
-        <div class="filters">
-          <select id="accountPlatformFilter"><option value="">全部平台</option></select>
-          <select id="accountUsableFilter">
-            <option value="">全部状态</option>
-            <option value="usable">仅可用</option>
-            <option value="unusable">仅不可用</option>
-          </select>
-          <input id="accountSearch" placeholder="搜索账号名称 / 平台 / 主页地址" />
-        </div>
+    <div id="accountsTab">
+      <div class="flex justify-between items-center mb-4">
+        <h2>授权账号列表</h2>
+        <button class="btn-primary" onclick="showAddAccountModal()">+ 新增账号授权</button>
+      </div>
+      <div class="card">
         <table>
           <thead>
-            <tr><th>名称</th><th>平台</th><th>主页</th><th>授权时间</th><th>可用</th></tr>
+            <tr>
+              <th>账号名称</th>
+              <th>平台</th>
+              <th>认证方式</th>
+              <th>状态</th>
+              <th>授权时间</th>
+              <th>操作</th>
+            </tr>
           </thead>
-          <tbody id="accountsBody"></tbody>
+          <tbody id="accountsTable"></tbody>
         </table>
-      </section>
-    </div>
-
-    <section class="card" style="margin-top:20px;">
-      <h2>推文 / 发帖记录</h2>
-      <p class="muted">显示发布任务及结果，包含成功 / 失败 / 待执行。默认每 15 秒自动刷新。</p>
-      <div class="filters">
-        <select id="recordPlatformFilter"><option value="">全部平台</option></select>
-        <select id="recordStatusFilter">
-          <option value="">全部状态</option>
-          <option value="published">published</option>
-          <option value="failed">failed</option>
-          <option value="approved">approved</option>
-          <option value="pending_review">pending_review</option>
-          <option value="scheduled">scheduled</option>
-        </select>
-        <input id="recordSearch" placeholder="搜索标题 / 正文 / 账号 / task id" />
-      </div>
-      <div id="records"></div>
-    </section>
-  </div>
-
-  <div id="taskModal" class="modal hidden">
-    <div class="modal-panel">
-      <div class="row" style="justify-content:space-between;align-items:flex-start;">
-        <div>
-          <h2 id="taskModalTitle">任务详情</h2>
-          <div id="taskModalMeta" class="muted"></div>
-        </div>
-        <button class="secondary" onclick="closeTaskModal()">关闭</button>
-      </div>
-      <div class="stack" style="margin-top:12px;">
-        <div><h3>正文</h3><pre id="taskModalText"></pre></div>
-        <div><h3>媒体</h3><pre id="taskModalMedia"></pre></div>
-        <div><h3>结构化内容 content</h3><pre id="taskModalContent"></pre></div>
-        <div><h3>完整 publish_results</h3><pre id="taskModalResults"></pre></div>
-        <div><h3>最后一次 raw 回执</h3><pre id="taskModalRaw"></pre></div>
-        <div class="row">
-          <button id="taskRetryBtn">重新执行</button>
-          <span id="taskRetryMsg" class="muted"></span>
-        </div>
       </div>
     </div>
-  </div>
 
-  <div id="accountModal" class="modal hidden">
-    <div class="modal-panel">
-      <div class="row" style="justify-content:space-between;align-items:flex-start;">
-        <div>
-          <h2 id="accountModalTitle">账号详情</h2>
-          <div id="accountModalMeta" class="muted"></div>
-        </div>
-        <button class="secondary" onclick="closeAccountModal()">关闭</button>
-      </div>
-      <div class="stack" style="margin-top:12px;">
-        <div><h3>账号摘要</h3><pre id="accountModalSummary"></pre></div>
-        <div><h3>apiConfig</h3><pre id="accountModalApiConfig"></pre></div>
-        <div><h3>platformConfig</h3><pre id="accountModalPlatformConfig"></pre></div>
-        <div><h3>最近发布记录</h3><pre id="accountModalRecent"></pre></div>
+    <div id="recordsTab" class="hidden">
+      <h2 class="mb-4">发布记录</h2>
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th>标题</th>
+              <th>平台</th>
+              <th>账号</th>
+              <th>状态</th>
+              <th>发布时间</th>
+              <th>链接</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="recordsTable"></tbody>
+        </table>
       </div>
     </div>
-  </div>
 
-  <script>
-    let accounts = [];
-    let records = [];
-    let refreshTimer = null;
-    let currentTaskId = null;
-
-    async function j(url, opts) {
-      const r = await fetch(url, opts);
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.error || 'request failed');
-      return data;
-    }
-    const uniq = arr => [...new Set(arr.filter(Boolean))];
-    const pretty = x => JSON.stringify(x ?? null, null, 2);
-
-    function renderPlatformOptions(selectId, values, label = '全部平台') {
-      const el = document.getElementById(selectId);
-      const current = el.value;
-      el.innerHTML = `<option value="">${label}</option>`;
-      uniq(values).sort().forEach(v => {
-        const opt = document.createElement('option');
-        opt.value = v;
-        opt.textContent = v;
-        el.appendChild(opt);
-      });
-      el.value = current;
-    }
-
-    async function uploadFile(file) {
-      const data = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-      const res = await j('/api/upload-base64', {
-        method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ filename: file.name, contentType: file.type, data })
-      });
-      return res.path;
-    }
-
-    function composerAccounts() {
-      const platform = document.getElementById('composerPlatformFilter').value;
-      return accounts.filter(a => !platform || a.platform === platform);
-    }
-
-    function selectedAccount() {
-      return accounts.find(a => a.id === document.getElementById('accountSelect').value);
-    }
-
-    function updateComposer() {
-      const select = document.getElementById('accountSelect');
-      const items = composerAccounts();
-      const current = select.value;
-      select.innerHTML = '';
-      for (const item of items) {
-        const opt = document.createElement('option');
-        opt.value = item.id;
-        opt.textContent = `${item.platform} / ${item.name} ${item.usable ? '' : '(不可用)'}`;
-        select.appendChild(opt);
-      }
-      if (items.find(x => x.id === current)) select.value = current;
-      const acc = selectedAccount();
-      const hint = document.getElementById('platformHint');
-      if (!acc) {
-        hint.textContent = '请选择账号';
-        return;
-      }
-      const s = acc.summary || {};
-      hint.textContent = `限制：最长 ${s.maxText} 字；最多 ${s.maxImages} 张图；${s.supportsVideo ? '支持视频' : '不支持视频'}；${s.supportsLink ? '支持链接' : '不支持链接'}${s.threadHint ? '；长文建议拆线程' : ''}`;
-    }
-
-    function filteredAccounts() {
-      const platform = document.getElementById('accountPlatformFilter').value;
-      const usable = document.getElementById('accountUsableFilter').value;
-      const kw = document.getElementById('accountSearch').value.trim().toLowerCase();
-      return accounts.filter(item => {
-        if (platform && item.platform !== platform) return false;
-        if (usable === 'usable' && !item.usable) return false;
-        if (usable === 'unusable' && item.usable) return false;
-        if (kw && ![item.name, item.platform, item.homepageUrl].join(' ').toLowerCase().includes(kw)) return false;
-        return true;
-      });
-    }
-
-    function filteredRecords() {
-      const platform = document.getElementById('recordPlatformFilter').value;
-      const status = document.getElementById('recordStatusFilter').value;
-      const kw = document.getElementById('recordSearch').value.trim().toLowerCase();
-      return records.filter(item => {
-        if (platform && item.platform !== platform) return false;
-        if (status && item.status !== status) return false;
-        if (kw && ![item.title, item.taskName, item.text, item.accountName, item.id].join(' ').toLowerCase().includes(kw)) return false;
-        return true;
-      });
-    }
-
-    function renderAccounts() {
-      const tbody = document.getElementById('accountsBody');
-      const items = filteredAccounts();
-      tbody.innerHTML = '';
-      for (const item of items) {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td><a href="#" onclick="openAccountModal('${item.id}'); return false;">${item.name}</a></td>
-          <td><span class="pill">${item.platform}</span></td>
-          <td>${item.homepageUrl ? `<a href="${item.homepageUrl}" target="_blank">主页</a>` : '-'}</td>
-          <td>${item.authorizedAt || '-'}</td>
-          <td><span class="status ${item.usable ? 'ok' : 'bad'}">${item.usable ? '可用' : '不可用'}</span></td>
-        `;
-        tbody.appendChild(tr);
-      }
-    }
-
-    function renderRecords() {
-      const box = document.getElementById('records');
-      const items = filteredRecords();
-      box.innerHTML = '';
-      for (const item of items) {
-        const div = document.createElement('div');
-        const last = item.lastResult || {};
-        const resultState = item.status === 'published' ? 'ok' : (item.status === 'failed' ? 'bad' : '');
-        div.className = 'record';
-        div.innerHTML = `
-          <div class="row" style="justify-content:space-between;align-items:flex-start;">
-            <div>
-              <strong>${item.title || item.taskName || item.id}</strong>
-              <div class="muted">${item.platform || '-'} / ${item.accountName || '-'} / task: ${item.id}</div>
-            </div>
-            <div><span class="status ${resultState}">${item.status}</span></div>
+    <div id="publishTab" class="hidden">
+      <h2 class="mb-4">发布工作台</h2>
+      <div class="grid grid-2 gap-4">
+        <div class="card">
+          <h3 class="card-title">选择发布账号（可多选）</h3>
+          <div id="accountSelector" class="multi-select"></div>
+        </div>
+        <div class="card">
+          <h3 class="card-title">发布内容</h3>
+          <div class="form-group">
+            <label>标题（可选）</label>
+            <input id="pubTitle" placeholder="留空自动生成"/>
           </div>
-          <p style="white-space:pre-wrap;">${(item.text || '').slice(0, 400) || '<无正文>'}</p>
-          <div class="muted">创建: ${item.createdAt || '-'} ｜ 发布: ${item.publishedAt || '-'} ${item.homepageUrl ? `｜ <a href="${item.homepageUrl}" target="_blank">账号主页</a>` : ''}</div>
-          <div class="muted">结果链接: ${last.url ? `<a href="${last.url}" target="_blank">${last.url}</a>` : '-'} ｜ 平台ID: ${last.platformPostId || '-'}</div>
-          <div class="muted">失败说明/备注: ${item.reviewNotes || (last.raw && last.raw.error) || '-'}</div>
-          <div class="row" style="margin-top:8px;">
-            <button onclick="executeTask('${item.id}')">执行发布</button>
-            <button class="secondary" onclick="openTaskModal('${item.id}')">查看详情</button>
-            <button class="secondary" onclick="retryTask('${item.id}')">重新执行</button>
+          <div class="form-group">
+            <label>正文</label>
+            <textarea id="pubText" placeholder="输入要发布的内容"></textarea>
           </div>
-        `;
-        box.appendChild(div);
-      }
-    }
+          <div class="form-group">
+            <label>链接（可选）</label>
+            <input id="pubLink" placeholder="https://"/>
+          </div>
+          <div class="form-group">
+            <label>图片/视频</label>
+            <input id="pubFiles" type="file" multiple/>
+          </div>
+          <button class="btn-success" onclick="publishContent()" style="width:100%">发布到选中账号</button>
+          <p id="pubMsg" class="text-muted text-sm" style="margin-top:10px"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-    async function loadAccounts() {
-      const { items } = await j('/api/accounts');
-      accounts = items;
-      const platforms = accounts.map(x => x.platform);
-      renderPlatformOptions('accountPlatformFilter', platforms);
-      renderPlatformOptions('composerPlatformFilter', platforms);
-      renderAccounts();
-      updateComposer();
-    }
+<div id="addAccountModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 class="modal-title">新增账号授权</h2>
+      <button class="btn-secondary btn-sm" onclick="closeModal('addAccountModal')">关闭</button>
+    </div>
+    <div class="form-group">
+      <label>平台</label>
+      <select id="newPlatform">
+        <option value="x">Twitter/X</option>
+        <option value="youtube">YouTube</option>
+        <option value="reddit">Reddit</option>
+        <option value="discord">Discord</option>
+        <option value="slack">Slack</option>
+        <option value="facebook">Facebook</option>
+        <option value="instagram">Instagram</option>
+        <option value="discord_bot">Discord Bot</option>
+        <option value="pinterest">Pinterest</option>
+        <option value="threads">Threads</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>账号名称</label>
+      <input id="newAccountName" placeholder="例如：主账号"/>
+    </div>
+    <div class="form-group">
+      <label>认证方式</label>
+      <select id="newAuthMode">
+        <option value="composio">Composio 托管</option>
+        <option value="self">自有实现</option>
+      </select>
+    </div>
+    <div id="composioFields">
+      <div class="form-group">
+        <label>Composio Entity ID</label>
+        <input id="newEntityId" placeholder="user_xxx"/>
+      </div>
+      <button class="btn-primary" onclick="generateAuthUrl()">生成授权链接</button>
+      <pre id="authUrlDisplay" class="hidden" style="margin-top:10px"></pre>
+    </div>
+    <div id="selfFields" class="hidden">
+      <p class="text-muted text-sm">自有实现需要手动配置 API 凭证，请联系管理员</p>
+    </div>
+  </div>
+</div>
 
-    async function loadRecords() {
-      const { items } = await j('/api/publish-records?limit=100');
-      records = items;
-      renderPlatformOptions('recordPlatformFilter', records.map(x => x.platform));
-      renderRecords();
-    }
+<div id="recordDetailModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 class="modal-title">发布详情</h2>
+      <button class="btn-secondary btn-sm" onclick="closeModal('recordDetailModal')">关闭</button>
+    </div>
+    <div id="recordDetail"></div>
+  </div>
+</div>
 
-    async function submitPost() {
-      const btn = document.getElementById('submitBtn');
-      const msg = document.getElementById('submitMsg');
-      btn.disabled = true;
-      msg.textContent = '校验并上传媒体中...';
-      try {
-        const acc = selectedAccount();
-        if (!acc) throw new Error('请先选择账号');
-        const text = document.getElementById('text').value || '';
-        const link = document.getElementById('link').value || '';
-        const files = [...document.getElementById('files').files];
-        const videoCount = files.filter(f => f.type.startsWith('video/')).length;
-        const imageCount = files.length - videoCount;
-        const s = acc.summary || {};
-        if (text.length > s.maxText) throw new Error(`正文超出限制：${acc.platform} 最多 ${s.maxText} 字`);
-        if (imageCount > s.maxImages) throw new Error(`图片数量超出限制：${acc.platform} 最多 ${s.maxImages} 张`);
-        if (!s.supportsVideo && videoCount > 0) throw new Error(`${acc.platform} 当前流程不支持视频`);
-        if (!s.supportsLink && link) throw new Error(`${acc.platform} 当前流程不支持 link 字段`);
-        if (acc.platform === 'pinterest' && imageCount !== 1) throw new Error('Pinterest 必须且只能上传 1 张图片');
-        if (acc.platform === 'threads' && text.length > 500) throw new Error('Threads 最多 500 字');
-        const media = [];
-        for (const file of files) media.push(await uploadFile(file));
-        const payload = {
-          targetAccountId: document.getElementById('accountSelect').value,
-          title: document.getElementById('title').value,
-          text,
-          link,
-          media,
-        };
-        const res = await j('/api/publish', {
-          method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload)
-        });
-        msg.textContent = `已创建任务：${res.taskId}`;
-        document.getElementById('title').value = '';
-        document.getElementById('text').value = '';
-        document.getElementById('link').value = '';
-        document.getElementById('files').value = '';
-        await loadRecords();
-      } catch (e) {
-        msg.textContent = `失败：${e.message}`;
-      } finally {
-        btn.disabled = false;
-      }
-    }
+<script>
+let accounts=[];
+let records=[];
+let selectedAccounts=new Set();
 
-    async function executeTask(taskId) {
-      try {
-        const res = await j(`/api/publish/${taskId}/execute`, { method: 'POST' });
-        alert(res.ok ? `执行成功\n${res.stdout || ''}` : `执行失败\n${res.stderr || res.stdout || ''}`);
-        await loadRecords();
-      } catch (e) {
-        alert(`执行失败: ${e.message}`);
-      }
-    }
+async function api(url,opts){
+  const r=await fetch(url,opts);
+  const d=await r.json();
+  if(!r.ok)throw new Error(d.error||'请求失败');
+  return d;
+}
 
-    async function retryTask(taskId) {
-      try {
-        const res = await j(`/api/publish/${taskId}/retry`, { method: 'POST' });
-        alert(res.ok ? `重新执行成功\n${res.stdout || ''}` : `重新执行失败\n${res.stderr || res.stdout || ''}`);
-        await loadRecords();
-        if (currentTaskId === taskId) await openTaskModal(taskId);
-      } catch (e) {
-        alert(`重新执行失败: ${e.message}`);
-      }
-    }
+async function login(){
+  const msg=document.getElementById('loginMsg');
+  try{
+    const res=await api('/api/login',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        username:document.getElementById('loginUser').value,
+        password:document.getElementById('loginPass').value
+      })
+    });
+    msg.textContent='登录成功';
+    document.getElementById('username').textContent=res.username;
+    document.getElementById('loginView').classList.add('hidden');
+    document.getElementById('appView').classList.remove('hidden');
+    await loadData();
+  }catch(e){
+    msg.textContent='登录失败：'+e.message;
+  }
+}
 
-    async function openTaskModal(taskId) {
-      const { item } = await j(`/api/publish/${taskId}`);
-      currentTaskId = taskId;
-      document.getElementById('taskModalTitle').textContent = item.title || item.taskName || taskId;
-      document.getElementById('taskModalMeta').innerHTML = `${item.platform || '-'} / ${item.accountName || '-'} / ${item.status} / task: ${item.id}`;
-      document.getElementById('taskModalText').textContent = item.text || '';
-      document.getElementById('taskModalMedia').textContent = pretty(item.media || []);
-      document.getElementById('taskModalContent').textContent = pretty(item.content || {});
-      document.getElementById('taskModalResults').textContent = pretty(item.publishResults || []);
-      document.getElementById('taskModalRaw').textContent = pretty(item.lastResult?.raw || null);
-      document.getElementById('taskRetryMsg').textContent = '';
-      document.getElementById('taskRetryBtn').onclick = async () => {
-        const msg = document.getElementById('taskRetryMsg');
-        msg.textContent = '执行中...';
-        try {
-          const res = await j(`/api/publish/${taskId}/retry`, { method: 'POST' });
-          msg.textContent = res.ok ? '重新执行成功' : '重新执行失败';
-          await loadRecords();
-          await openTaskModal(taskId);
-        } catch (e) {
-          msg.textContent = `重新执行失败: ${e.message}`;
-        }
-      };
-      document.getElementById('taskModal').classList.remove('hidden');
-    }
+async function logout(){
+  await api('/api/logout',{method:'POST'});
+  location.reload();
+}
 
-    function closeTaskModal() {
-      currentTaskId = null;
-      document.getElementById('taskModal').classList.add('hidden');
-    }
+function switchTab(tab){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('accountsTab').classList.add('hidden');
+  document.getElementById('recordsTab').classList.add('hidden');
+  document.getElementById('publishTab').classList.add('hidden');
+  document.getElementById(tab+'Tab').classList.remove('hidden');
+  if(tab==='publish')renderAccountSelector();
+}
 
-    async function openAccountModal(accountId) {
-      const { item } = await j(`/api/accounts/${accountId}`);
-      document.getElementById('accountModalTitle').textContent = item.name;
-      document.getElementById('accountModalMeta').textContent = `${item.platform} / ${item.status} / ${item.usable ? '可用' : '不可用'} / ${item.homepageUrl || '-'}`;
-      document.getElementById('accountModalSummary').textContent = pretty({
-        id: item.id,
-        accountId: item.accountId,
-        authorizedAt: item.authorizedAt,
-        positioning: item.positioning,
-        targetAudience: item.targetAudience,
-        contentDirection: item.contentDirection,
-        summary: item.summary,
+async function loadData(){
+  const [acc,rec]=await Promise.all([
+    api('/api/accounts'),
+    api('/api/publish-records?limit=100')
+  ]);
+  accounts=acc.items;
+  records=rec.items;
+  renderAccounts();
+  renderRecords();
+}
+
+function renderAccounts(){
+  const tbody=document.getElementById('accountsTable');
+  tbody.innerHTML='';
+  accounts.forEach(acc=>{
+    const tr=document.createElement('tr');
+    const authMode=acc.apiConfig?.auth_mode||'self';
+    const status=acc.usable?'可用':'不可用';
+    const statusClass=acc.usable?'badge-success':'badge-error';
+    tr.innerHTML=`
+      <td>${acc.name}</td>
+      <td><span class="badge badge-info">${acc.platform}</span></td>
+      <td>${authMode==='composio'?'Composio':'自有'}</td>
+      <td><span class="badge ${statusClass}">${status}</span></td>
+      <td class="text-sm text-muted">${acc.authorizedAt||'-'}</td>
+      <td>
+        ${authMode==='composio'?`<button class="btn-sm btn-secondary" onclick="checkConnection('${acc.id}')">检查连接</button>`:''}
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderRecords(){
+  const tbody=document.getElementById('recordsTable');
+  tbody.innerHTML='';
+  records.forEach(rec=>{
+    const tr=document.createElement('tr');
+    const statusMap={published:'success',failed:'error',approved:'warning'};
+    const statusClass='badge-'+(statusMap[rec.status]||'info');
+    const url=rec.lastResult?.url||'-';
+    tr.innerHTML=`
+      <td>${rec.title||rec.taskName||rec.id}</td>
+      <td><span class="badge badge-info">${rec.platform||'-'}</span></td>
+      <td class="text-sm">${rec.accountName||'-'}</td>
+      <td><span class="badge ${statusClass}">${rec.status}</span></td>
+      <td class="text-sm text-muted">${rec.publishedAt||rec.createdAt||'-'}</td>
+      <td class="text-sm">${url!=='-'?`<a href="${url}" target="_blank" style="color:#3b82f6">查看</a>`:'-'}</td>
+      <td><button class="btn-sm btn-secondary" onclick="showRecordDetail('${rec.id}')">详情</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderAccountSelector(){
+  const div=document.getElementById('accountSelector');
+  div.innerHTML='';
+  accounts.filter(a=>a.usable).forEach(acc=>{
+    const item=document.createElement('div');
+    item.className='multi-select-item';
+    if(selectedAccounts.has(acc.id))item.classList.add('selected');
+    item.innerHTML=`
+      <input type="checkbox" ${selectedAccounts.has(acc.id)?'checked':''} onchange="toggleAccount('${acc.id}')"/>
+      <span>${acc.name} (${acc.platform})</span>
+    `;
+    div.appendChild(item);
+  });
+}
+
+function toggleAccount(id){
+  if(selectedAccounts.has(id))selectedAccounts.delete(id);
+  else selectedAccounts.add(id);
+  renderAccountSelector();
+}
+
+async function publishContent(){
+  const msg=document.getElementById('pubMsg');
+  if(selectedAccounts.size===0){
+    msg.textContent='请至少选择一个账号';
+    return;
+  }
+  const text=document.getElementById('pubText').value;
+  if(!text){
+    msg.textContent='请输入正文';
+    return;
+  }
+  msg.textContent='发布中...';
+  try{
+    const files=document.getElementById('pubFiles').files;
+    const media=[];
+    for(const f of files){
+      const base64=await fileToBase64(f);
+      const res=await api('/api/upload-base64',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({filename:f.name,contentType:f.type,data:base64})
       });
-      document.getElementById('accountModalApiConfig').textContent = pretty(item.apiConfig || {});
-      document.getElementById('accountModalPlatformConfig').textContent = pretty(item.platformConfig || {});
-      document.getElementById('accountModalRecent').textContent = pretty(item.recentTasks || []);
-      document.getElementById('accountModal').classList.remove('hidden');
+      media.push(res.url);
     }
-
-    function closeAccountModal() {
-      document.getElementById('accountModal').classList.add('hidden');
-    }
-
-    async function login() {
-      const btn = document.getElementById('loginBtn');
-      const msg = document.getElementById('loginMsg');
-      btn.disabled = true;
-      try {
-        const res = await j('/api/login', {
-          method: 'POST', headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({ username: document.getElementById('loginUser').value, password: document.getElementById('loginPassword').value })
+    let success=0;
+    for(const accId of selectedAccounts){
+      try{
+        await api('/api/publish',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            targetAccountId:accId,
+            title:document.getElementById('pubTitle').value,
+            text,
+            link:document.getElementById('pubLink').value,
+            media
+          })
         });
-        msg.textContent = '登录成功';
-        await bootstrapApp(res.username);
-      } catch (e) {
-        msg.textContent = `登录失败：${e.message}`;
-      } finally {
-        btn.disabled = false;
+        success++;
+      }catch(e){
+        console.error('发布失败',accId,e);
       }
     }
+    msg.textContent=`发布完成：${success}/${selectedAccounts.size} 成功`;
+    document.getElementById('pubTitle').value='';
+    document.getElementById('pubText').value='';
+    document.getElementById('pubLink').value='';
+    document.getElementById('pubFiles').value='';
+    await loadData();
+  }catch(e){
+    msg.textContent='发布失败：'+e.message;
+  }
+}
 
-    async function logout() {
-      await j('/api/logout', { method: 'POST' });
-      stopAutoRefresh();
-      document.getElementById('appView').classList.add('hidden');
-      document.getElementById('loginView').classList.remove('hidden');
-    }
+function fileToBase64(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>resolve(reader.result);
+    reader.onerror=reject;
+    reader.readAsDataURL(file);
+  });
+}
 
-    function startAutoRefresh() {
-      stopAutoRefresh();
-      refreshTimer = setInterval(async () => {
-        try {
-          await Promise.all([loadAccounts(), loadRecords()]);
-          if (currentTaskId && !document.getElementById('taskModal').classList.contains('hidden')) await openTaskModal(currentTaskId);
-        } catch {}
-      }, 15000);
-    }
+function showAddAccountModal(){
+  document.getElementById('addAccountModal').classList.add('show');
+  document.getElementById('newAuthMode').onchange=()=>{
+    const mode=document.getElementById('newAuthMode').value;
+    document.getElementById('composioFields').classList.toggle('hidden',mode!=='composio');
+    document.getElementById('selfFields').classList.toggle('hidden',mode==='composio');
+  };
+}
 
-    function stopAutoRefresh() {
-      if (refreshTimer) clearInterval(refreshTimer);
-      refreshTimer = null;
-    }
+async function generateAuthUrl(){
+  const display=document.getElementById('authUrlDisplay');
+  try{
+    const res=await api('/api/composio/authorize',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        entity_id:document.getElementById('newEntityId').value,
+        platform:document.getElementById('newPlatform').value
+      })
+    });
+    display.textContent=res.auth_url;
+    display.classList.remove('hidden');
+    window.open(res.auth_url,'_blank');
+  }catch(e){
+    alert('生成失败：'+e.message);
+  }
+}
 
-    async function bootstrapApp(username) {
-      document.getElementById('whoami').textContent = `已登录：${username}`;
+async function checkConnection(accountId){
+  const acc=accounts.find(a=>a.id===accountId);
+  if(!acc)return;
+  try{
+    const res=await api('/api/composio/check',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        entity_id:acc.apiConfig.composio_user_id,
+        platform:acc.platform
+      })
+    });
+    alert(res.connected?'✅ 已连接':'❌ 未连接');
+  }catch(e){
+    alert('检查失败：'+e.message);
+  }
+}
+
+async function showRecordDetail(id){
+  const rec=records.find(r=>r.id===id);
+  if(!rec)return;
+  const div=document.getElementById('recordDetail');
+  div.innerHTML=`
+    <div class="form-group">
+      <label>标题</label>
+      <p>${rec.title||rec.taskName||'-'}</p>
+    </div>
+    <div class="form-group">
+      <label>正文</label>
+      <pre>${rec.text||'-'}</pre>
+    </div>
+    <div class="form-group">
+      <label>发布结果</label>
+      <pre>${JSON.stringify(rec.publishResults||[],null,2)}</pre>
+    </div>
+  `;
+  document.getElementById('recordDetailModal').classList.add('show');
+}
+
+function closeModal(id){
+  document.getElementById(id).classList.remove('show');
+}
+
+async function checkSession(){
+  try{
+    const res=await api('/api/session');
+    if(res.authenticated){
+      document.getElementById('username').textContent=res.username;
       document.getElementById('loginView').classList.add('hidden');
       document.getElementById('appView').classList.remove('hidden');
-      await Promise.all([loadAccounts(), loadRecords()]);
-      startAutoRefresh();
+      await loadData();
     }
+  }catch{}
+}
 
-    async function restoreSession() {
-      try {
-        const res = await j('/api/session');
-        if (res.authenticated) await bootstrapApp(res.username);
-      } catch {}
-    }
-
-    document.getElementById('loginBtn').addEventListener('click', login);
-    document.getElementById('logoutBtn').addEventListener('click', logout);
-    document.getElementById('submitBtn').addEventListener('click', submitPost);
-    document.getElementById('refreshBtn').addEventListener('click', async () => { await loadAccounts(); await loadRecords(); });
-    document.getElementById('accountPlatformFilter').addEventListener('change', renderAccounts);
-    document.getElementById('accountUsableFilter').addEventListener('change', renderAccounts);
-    document.getElementById('accountSearch').addEventListener('input', renderAccounts);
-    document.getElementById('recordPlatformFilter').addEventListener('change', renderRecords);
-    document.getElementById('recordStatusFilter').addEventListener('change', renderRecords);
-    document.getElementById('recordSearch').addEventListener('input', renderRecords);
-    document.getElementById('composerPlatformFilter').addEventListener('change', updateComposer);
-    document.getElementById('accountSelect').addEventListener('change', updateComposer);
-
-    restoreSession();
-  </script>
+checkSession();
+</script>
 </body>
 </html>

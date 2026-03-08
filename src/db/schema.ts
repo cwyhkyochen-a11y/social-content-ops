@@ -50,10 +50,17 @@ export const targetAccounts = sqliteTable('target_accounts', {
   
   // --- API配置字段 (加密存储) ---
   
+  /** 认证模式 - self(自有API) | composio(Composio托管) */
+  authMode: text('auth_mode').notNull().$default(() => 'self'),
+  
+  /** Composio User ID - 使用Composio时的用户标识 */
+  composioUserId: text('composio_user_id'),
+  
   /** API配置JSON - 各平台认证信息，存储时加密 */
   // Reddit: { client_id, client_secret, refresh_token }
   // Pinterest: { access_token, refresh_token }
   // Discord: { bot_token, webhook_urls }
+  // 当 authMode='composio' 时此字段可为空
   apiConfig: text('api_config', { mode: 'json' }),
   
   // --- 运营策略字段 ---
